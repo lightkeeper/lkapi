@@ -37,12 +37,12 @@ def lk_api_response_to_frames(response:typing.Union[str, typing.List[typing.Dict
         response = json.loads(response)
     elif hasattr(response, 'text'):
         if response.url.endswith('/signin'):
-            raise RuntimeError(f'Not connected to web api:\n{response.url}')
+            raise RuntimeError(f'Unable to connect to the server because we were forwarded to the signin screen:\n{response.url}')
         response_url = response.url
         response = response.text
         if response[0] not in {'{', '['}:
             # a web page was returned ... this is not expected
-            raise RuntimeError(f'Not connected to web api:\n{response_url}')
+            raise RuntimeError(f'Unable to connect to the server. Please retry or contact support:\n{response_url}')
         response = json.loads(response)
 
     return lk_api_data_to_frames(response)
@@ -101,7 +101,13 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
                                            frame_data['net']], axis=1)
 
             # combine with net data for complete information
-            frame_data['groups'] = pd.concat([frame_data.pop('net'), frame_data['groups']]).reset_index(drop=True)
+            frame_items = []
+            net_frame = frame_data.pop('net')
+            if len(net_frame) > 0:
+                frame_items.append(net_frame)
+            if len(frame_data['groups']) > 0:
+                frame_items.append(frame_data['groups'])
+            frame_data['groups'] = pd.concat(frame_items).reset_index(drop=True)
 
             # add in level information
             frame_data['groups'] = pd.concat([pd.DataFrame({'level': [0] * len(frame_data['groups'])}),
