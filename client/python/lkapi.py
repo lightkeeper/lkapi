@@ -122,8 +122,10 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
             if frame_data['groups']['level'].sum() == 0:
                 frame_data['groups'].drop('level', axis=1, inplace=True)
 
-            # add group column names back to the time series for consistency
-            frame_data['time'].columns = group_cols + frame_data['time'].columns.to_list()[len(group_cols):]
+            # add group column names back to the time series for consistency if there are rows of groups
+            group_rows = data['groups']['rows']
+            if len(group_rows) > 0:
+                frame_data['time'].columns = group_cols + frame_data['time'].columns.to_list()[len(group_cols):]
         else:
             frame_data['groups'] = frame_data.pop('net')
     else:
