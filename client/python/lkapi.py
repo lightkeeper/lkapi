@@ -59,7 +59,7 @@ def lk_api_data_to_frames(data:typing.List[typing.Dict[str, typing.Any]]) -> typ
     data_type = 'layout'
     if data_type == 'layout':
         # -- layout API
-        blocks = [lk_layout_element_to_frames(block) for block in data]
+        blocks = [lk_layout_element_to_frames(block) for block in data['Payload']]
         if len(blocks) == 1:
             return blocks[0]
         else:
@@ -83,7 +83,6 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
     Returns: A dictionary of pandas frames.
     """
     frame_data = {}
-
     data_version = data['version']
 
     if data_version == 1:
