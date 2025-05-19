@@ -185,6 +185,22 @@ def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFra
 
     return data_frame
 
+def payload_to_frame(responseResult):
+    """
+
+    Args:
+        responseResult: repsonse dictionary from an api request.
+
+    Returns:
+        payload results from the api response as a frame
+    """
+    try:
+        payload = responseResult['Payload']
+        payload_frame = lk_api_data_to_frames(payload)
+        return payload_frame
+    except:
+        print("No payload data returned")
+
 #---------------
 # Basic Client
 #---------------
