@@ -188,16 +188,16 @@ def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFra
 #---------------
 # Basic Client
 #---------------
-def getDate(iso_time_string):
+def get_datetime(iso_time_string):
     """
-    Converts an ISO formatted time string into a date object.
+    Converts an ISO formatted time string into a datetime object.
 
     Args:
         iso_time_string (str): A string representing a date and time in ISO 8601 format
                                 (e.g., "2023-10-26T10:30:00" or "2023-10-26").
 
     Returns:
-        datetime.date: A date object extracted from the ISO string.
+        datetime: A datetime object extracted from the ISO string.
                        Returns None if the string is not a valid ISO format
                        or if any other error occurs during parsing.
     """
@@ -205,7 +205,7 @@ def getDate(iso_time_string):
         # Parse the ISO formatted string into a datetime object
         datetime_obj = datetime.fromisoformat(iso_time_string)
         # Extract and return only the date part
-        return datetime_obj.date()
+        return datetime_obj
     except ValueError:
         print(f"Error: The provided string '{iso_time_string}' is not a valid ISO format or is otherwise unparseable.")
         return None
@@ -291,9 +291,9 @@ if __name__ == "__main__":
 
     # portfolio dates
     portfolioDetails = api_response.get("PortfolioDetails")
-    lastDate = getDate(portfolioDetails.get("LastDate"))
-    firstDate = getDate(portfolioDetails.get("FirstDate"))
-    lastUpdated = getDate(portfolioDetails.get("LastUpdated"))
+    lastDate = get_datetime(portfolioDetails.get("LastDate"))
+    firstDate = get_datetime(portfolioDetails.get("FirstDate"))
+    lastUpdated = get_datetime(portfolioDetails.get("LastUpdated"))
 
     print("Portfolio First Date:", firstDate)
     print("Portfolio Last Date:", lastDate)
