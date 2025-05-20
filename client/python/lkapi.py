@@ -1,3 +1,4 @@
+
 #! /usr/bin/env python
 # Copyright (c) 2025 LightKeeper LLC
 # ANY REDISTRIBUTION OR COPYING OF THIS MATERIAL WITHOUT THE EXPRESS CONSENT
@@ -22,6 +23,7 @@ import json
 import typing
 import collections
 import urllib.parse
+from datetime import datetime
 
 import requests
 import pandas as pd
@@ -183,9 +185,50 @@ def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFra
 
     return data_frame
 
+def payload_to_frame(responseResult):
+    """
+
+    Args:
+        responseResult: repsonse dictionary from an api request.
+
+    Returns:
+        payload results from the api response as a frame
+    """
+    try:
+        payload = responseResult['Payload']
+        payload_frame = lk_api_data_to_frames(payload)
+        return payload_frame
+    except:
+        print("No payload data returned")
+
 #---------------
 # Basic Client
 #---------------
+def get_datetime(iso_time_string):
+    """
+    Converts an ISO formatted time string into a datetime object.
+
+    Args:
+        iso_time_string (str): A string representing a date and time in ISO 8601 format
+                                (e.g., "2023-10-26T10:30:00" or "2023-10-26").
+
+    Returns:
+        datetime: A datetime object extracted from the ISO string.
+                       Returns None if the string is not a valid ISO format
+                       or if any other error occurs during parsing.
+    """
+    try:
+        # Parse the ISO formatted string into a datetime object
+        datetime_obj = datetime.fromisoformat(iso_time_string)
+        # Extract and return only the date part
+        return datetime_obj
+    except ValueError:
+        print(f"Error: The provided string '{iso_time_string}' is not a valid ISO format or is otherwise unparseable.")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return None
+
 def get_auth_token(environment:str, hostname:str, username:str, password:str, **kwargs) -> str:
     """
     Generates an authorization token from Cognito using the supplied username and password. Tokens are valid for
@@ -232,8 +275,7 @@ def make_api_request(url:str, username:str, password:str,):
         api_headers["Authorization"] = token
         response = requests.get(url, headers=api_headers)
 
-    return lk_api_response_to_frames(response)
-
+    return response.json()
 
 if __name__ == "__main__":
 
@@ -246,4 +288,52 @@ if __name__ == "__main__":
         "username": "XXXXXXXXXXXX",
         "password": "XXXXXXXXXXXXXXXXX"
     }
-    print(make_api_request(**CONFIG))
+
+    api_response = make_api_request(**CONFIG)
+
+    # access main data
+    payload = api_response.get("Payload")
+    frames = lk_api_response_to_frames(payload)
+    print(frames)
+    print("------ end of frames ------")
+
+    # in addition, you can also access additional metadata
+    responseId = api_response.get("ResponseId")
+    timestamp = api_response.get("TimeStamp")
+
+    print("Response ID:", responseId)
+    print("TimeStamp:", timestamp)
+    print("---------------------------")
+
+    # portfolio dates
+    portfolioDetails = api_response.get("PortfolioDetails")
+    lastDate = get_datetime(portfolioDetails.get("LastDate"))
+    firstDate = get_datetime(portfolioDetails.get("FirstDate"))
+    lastUpdated = get_datetime(portfolioDetails.get("LastUpdated"))
+
+    print("Portfolio First Date:", firstDate)
+    print("Portfolio Last Date:", lastDate)
+    print("Portfolio Last Updated:", lastUpdated)
+    print("---------------------------")
+
+    # Request details
+    requestDetails = api_response.get("RequestDetails")
+    requestPath = requestDetails.get("Path")
+    queryString = requestDetails.get("QueryString")
+    queryParams = requestDetails.get("QueryParameters")
+
+    print("Request Path:", requestPath)
+    print("Request QueryString:", queryString)
+    print("Request Parameters:", queryParams)
+    print("---------------------------")
+
+    # get specific query parameter values
+    portfolioId = queryParams.get("focus")
+    bd = queryParams.get("bd")
+    ed = queryParams.get("ed")
+
+    print("Portfolio ID:", portfolioId)
+    print("Begin date:", bd)
+    print("End date:", ed)
+
+
