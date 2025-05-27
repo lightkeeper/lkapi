@@ -23,7 +23,6 @@ import json
 import typing
 import collections
 import urllib.parse
-from datetime import datetime
 
 import requests
 import pandas as pd
@@ -106,6 +105,7 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
             frame_items = []
             net_frame = frame_data.pop('net')
             if len(net_frame) > 0:
+                net_frame.columns = frame_data['groups'].columns.to_list()[-1 *len(net_frame.columns):]
                 frame_items.append(net_frame)
             if len(frame_data['groups']) > 0:
                 frame_items.append(frame_data['groups'])
@@ -130,6 +130,9 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
                 frame_data['time'].columns = group_cols + frame_data['time'].columns.to_list()[len(group_cols):]
         else:
             frame_data['groups'] = frame_data.pop('net')
+        if 'time' in frame_data:
+            # convert time information
+            frame_data['time']['Date'] = pd.to_datetime(frame_data['time']['Date'])
     else:
         raise RuntimeError(f'Unknown layout block version: {data_version}')
 
@@ -189,7 +192,7 @@ def payload_to_frame(responseResult):
     """
 
     Args:
-        responseResult: repsonse dictionary from an api request.
+        responseResult: response dictionary from an api request.
 
     Returns:
         payload results from the api response as a frame
@@ -219,7 +222,7 @@ def get_datetime(iso_time_string):
     """
     try:
         # Parse the ISO formatted string into a datetime object
-        datetime_obj = datetime.fromisoformat(iso_time_string)
+        datetime_obj = pd.to_datetime(iso_time_string)
         # Extract and return only the date part
         return datetime_obj
     except ValueError:
