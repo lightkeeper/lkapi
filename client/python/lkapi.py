@@ -28,6 +28,8 @@ from datetime import datetime
 import requests
 import pandas as pd
 
+CURRENT_VERSION = 2  # The current version of the API we are using
+
 def lk_api_response_to_frames(response:typing.Union[str, typing.List[typing.Dict[str, typing.Any]], requests.Response]) -> typing.Optional[typing.Dict[str, pd.DataFrame]]:
     """
     Parses an API json response string to a dictionary of pandas frames.
@@ -131,7 +133,6 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
         else:
             frame_data['groups'] = frame_data.pop('net')
     elif data_version == 2:
-        print('trying to frame v2')
         for key in ['rollup', 'time']:
             headers = data['headers']
             keyFrame = lk_layout_data_to_frame_v2(data[key], key, headers)
@@ -420,11 +421,16 @@ if __name__ == "__main__":
     print("------ end of frames ------")
 
     # in addition, you can also access additional metadata
+    version = CURRENT_VERSION  # or 1 based on the API version
+    if payload is not None and len(payload) >= 1:
+        version = payload[0].get("version", CURRENT_VERSION)
+
     responseId = api_response.get("ResponseId")
     timestamp = api_response.get("TimeStamp")
 
     print("Response ID:", responseId)
     print("TimeStamp:", timestamp)
+    print("Api Version:", version)
     print("---------------------------")
 
     # portfolio dates
