@@ -28,6 +28,8 @@ from datetime import datetime
 import requests
 import pandas as pd
 
+CURRENT_VERSION = 2  # The current version of the API we are using
+
 def lk_api_response_to_frames(response:typing.Union[str, typing.List[typing.Dict[str, typing.Any]], requests.Response]) -> typing.Optional[typing.Dict[str, pd.DataFrame]]:
     """
     Parses an API json response string to a dictionary of pandas frames.
@@ -130,6 +132,15 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
                 frame_data['time'].columns = group_cols + frame_data['time'].columns.to_list()[len(group_cols):]
         else:
             frame_data['groups'] = frame_data.pop('net')
+    elif data_version == 2:
+        for key in ['rollup', 'time']:
+            headers = data['headers']
+            keyFrame = lk_layout_data_to_frame_v2(data[key], key, headers)
+            if keyFrame is not None:
+                frame_data[key] = keyFrame
+        if not frame_data:
+            # empty data set ... return None to skip in upstream processing
+            return None
     else:
         raise RuntimeError(f'Unknown layout block version: {data_version}')
 
@@ -184,6 +195,108 @@ def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFra
         data_frame = pd.concat([path_frame, data_frame], axis=1)
 
     return data_frame
+def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers) -> pd.DataFrame:
+    """
+
+    Args:
+        data: A inner data dictionary such as rollup from V1 of the layout API.
+    Returns: A data frame of the provided data.
+    """
+    # data_type = data['type']
+    # data_depth = data['depth']
+    # data_headers = data['headers']
+    is_grouped = "groups" in data.keys()
+
+    if data_type == 'Net' and data_headers[0] == 'Total':
+        # drop the total since it isn't helpful
+        data_headers = data_headers[1:]
+
+    if is_grouped:
+        if data_type == 'rollup' and data_headers[0] != 'Date':
+            path_headers = data_headers[0].split(' / ')
+            if len(path_headers) == 1:
+                # fill in dummy variables for missing path details
+                path_headers = [f'Level{l + 1}' for l in range(len(data['rows'][0]['path']) - 1)] + path_headers
+                # create a new copy of data headers to avoid clobbering
+            data_headers = [path_headers.pop()] + data_headers[1:]
+            # instrument is the default rollup so not title cased ... correct that
+            if data_headers[0] == 'instrument':
+                data_headers[0] = 'Instrument'
+            # data_frame.columns = data_headers
+
+        elif data_type == 'time':
+            data_headers[0] = 'Date'
+
+        dfs = extract_data_recursive(data)
+
+        if not dfs:
+            return pd.DataFrame()
+
+        # Combine all DataFrames
+        data_frame = pd.concat(dfs, ignore_index=True)
+
+        num_data_cols = len([col for col in data_frame.columns if isinstance(col, int)])
+
+        # Get group columns (they start with 'Group_Level_')
+        group_columns = [col for col in data_frame.columns if isinstance(col, str) and col.startswith('Group_Level_')]
+        group_columns.sort()  # Ensure proper order
+
+        # Create the final column names list
+        final_column_names = data_headers[:num_data_cols] + group_columns
+
+        # Reorder columns: put group columns after the first data column (Instrument)
+        if group_columns:
+            # Get the numeric column indices for data
+            data_col_indices = [i for i in range(num_data_cols)]
+
+            # New order: first data column, then group columns, then remaining data columns
+            new_order = [data_col_indices[0]] + group_columns + data_col_indices[1:]
+            data_frame = data_frame[new_order]
+
+            # Set the final column names
+            data_frame.columns = [data_headers[0]] + group_columns + data_headers[1:num_data_cols]
+        else:
+            # No group columns, just set data column names
+            data_frame.columns = data_headers[:num_data_cols]
+
+    else:
+        if data_type == 'time':
+            data_headers[0] = 'Date'
+        data_frame = pd.DataFrame([r for r in data['data']], columns=data_headers)
+
+    return data_frame
+
+def extract_data_recursive(data, group_path=[]):
+    """
+    Recursively extract data from nested group structure.
+
+    Args:
+        data: The data structure (dict)
+        group_path: List to track the current group hierarchy
+
+    Returns:
+        List of DataFrames with group information
+    """
+    dfs = []
+
+    # Check if this level has 'data' key (leaf node)
+    if 'data' in data:
+        df = pd.DataFrame(data['data'])
+        # Add group columns for each level in the hierarchy
+        for i, group_name in enumerate(group_path):
+            df[f'Group_Level_{i+1}'] = group_name
+        dfs.append(df)
+
+    # Check if this level has 'groups' key (intermediate node)
+    elif 'groups' in data:
+        for group_name, group_info in data['groups'].items():
+            # Recursively process each group, adding current group to path
+            sub_dfs = extract_data_recursive(group_info, group_path + [group_name])
+            dfs.extend(sub_dfs)
+
+    return dfs
+
+
 
 def payload_to_frame(responseResult):
     """
@@ -194,12 +307,22 @@ def payload_to_frame(responseResult):
     Returns:
         payload results from the api response as a frame
     """
-    try:
-        payload = responseResult['Payload']
-        payload_frame = lk_api_data_to_frames(payload)
-        return payload_frame
-    except:
-        print("No payload data returned")
+    version = responseResult['Payload'][0]['version']
+
+    if version == 'v1':
+        try:
+            payload = responseResult['Payload']
+            payload_frame = lk_api_data_to_frames(payload)
+            return payload_frame
+        except:
+            print("No payload data returned")
+    else:
+        try:
+            payload = responseResult['Payload']
+            payload_frame = lk_api_data_to_frames(payload)
+            return payload_frame
+        except:
+            print("No payload data returned")
 
 #---------------
 # Basic Client
@@ -298,11 +421,16 @@ if __name__ == "__main__":
     print("------ end of frames ------")
 
     # in addition, you can also access additional metadata
+    version = CURRENT_VERSION  # or 1 based on the API version
+    if payload is not None and len(payload) >= 1:
+        version = payload[0].get("version", CURRENT_VERSION)
+
     responseId = api_response.get("ResponseId")
     timestamp = api_response.get("TimeStamp")
 
     print("Response ID:", responseId)
     print("TimeStamp:", timestamp)
+    print("Api Version:", version)
     print("---------------------------")
 
     # portfolio dates
