@@ -39,14 +39,15 @@ def lk_api_response_to_frames(response:typing.Union[str, typing.List[typing.Dict
     if isinstance(response, str):
         response = json.loads(response)
     elif hasattr(response, 'text'):
+        # this is a raw response object ... convert it to json after confirming it is a good page
         if response.url.endswith('/signin'):
             raise RuntimeError(f'Unable to connect to the server because we were forwarded to the signin screen:\n{response.url}')
         response_url = response.url
-        response = response.text
-        if response[0] not in {'{', '['}:
+        response_text = response.text
+        if response_text[0] not in {'{', '['}:
             # a web page was returned ... this is not expected
             raise RuntimeError(f'Unable to connect to the server. Please retry or contact support:\n{response_url}')
-        response = json.loads(response)
+        response = json.loads(response_text)
 
     return lk_api_data_to_frames(response)
 
@@ -61,19 +62,22 @@ def lk_api_data_to_frames(data:typing.List[typing.Dict[str, typing.Any]]) -> typ
     # we are assuming layout json but if we could have different types in addition to different versions switch here
     data_type = 'layout'
     if data_type == 'layout':
-        # -- layout API
-        blocks = [lk_layout_element_to_frames(block) for block in data]
-        if len(blocks) == 1:
-            return blocks[0]
+        if 'Payload' in data:
+            # -- layout API
+            blocks = [lk_layout_element_to_frames(block) for block in data['Payload']]
+            if len(blocks) == 1:
+                return blocks[0]
+            else:
+                # join into a single frame
+                block_dict = collections.defaultdict(list)
+                for block in blocks:
+                    if block is None:
+                        continue
+                    for key, frame in block.items():
+                        block_dict[key].append(frame)
+                return {k: pd.concat(v, ignore_index=True) for k,v in block_dict.items()}
         else:
-            # join into a single frame
-            block_dict = collections.defaultdict(list)
-            for block in blocks:
-                if block is None:
-                    continue
-                for key, frame in block.items():
-                    block_dict[key].append(frame)
-            return {k: pd.concat(v, ignore_index=True) for k,v in block_dict.items()}
+            raise RuntimeError(f'LK Layout API data missing: Payload')
     else:
         raise RuntimeError(f'Unknown LK API data type: {data_type}')
 
@@ -198,6 +202,10 @@ def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFra
         data_frame = pd.concat([path_frame, data_frame], axis=1)
 
     return data_frame
+
+#---------------
+# Version 2.0
+#---------------
 def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers) -> pd.DataFrame:
     """
 
@@ -205,9 +213,6 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
         data: A inner data dictionary such as rollup from V1 of the layout API.
     Returns: A data frame of the provided data.
     """
-    # data_type = data['type']
-    # data_depth = data['depth']
-    # data_headers = data['headers']
     is_grouped = "groups" in data.keys()
 
     if data_type == 'Net' and data_headers[0] == 'Total':
@@ -215,22 +220,14 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
         data_headers = data_headers[1:]
 
     if is_grouped:
-        if data_type == 'rollup' and data_headers[0] != 'Date':
-            path_headers = data_headers[0].split(' / ')
-            if len(path_headers) == 1:
-                # fill in dummy variables for missing path details
-                path_headers = [f'Level{l + 1}' for l in range(len(data['rows'][0]['path']) - 1)] + path_headers
-                # create a new copy of data headers to avoid clobbering
-            data_headers = [path_headers.pop()] + data_headers[1:]
-            # instrument is the default rollup so not title cased ... correct that
-            if data_headers[0] == 'instrument':
-                data_headers[0] = 'Instrument'
-            # data_frame.columns = data_headers
+        group_headers = data_headers[0].split(' / ')
+        base_data_type = group_headers.pop()
+        if data_type == 'time':
+            # time always has Date as the base data type
+            base_data_type = 'Date'
+        data_headers = [base_data_type] + data_headers[1:]
 
-        elif data_type == 'time':
-            data_headers[0] = 'Date'
-
-        dfs = extract_data_recursive(data)
+        dfs = extract_group_data(data, group_headers)
 
         if not dfs:
             return pd.DataFrame()
@@ -241,11 +238,7 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
         num_data_cols = len([col for col in data_frame.columns if isinstance(col, int)])
 
         # Get group columns (they start with 'Group_Level_')
-        group_columns = [col for col in data_frame.columns if isinstance(col, str) and col.startswith('Group_Level_')]
-        group_columns.sort()  # Ensure proper order
-
-        # Create the final column names list
-        final_column_names = data_headers[:num_data_cols] + group_columns
+        group_columns = [col for col in data_frame.columns if isinstance(col, str)]
 
         # Reorder columns: put group columns after the first data column (Instrument)
         if group_columns:
@@ -267,14 +260,15 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
             data_headers[0] = 'Date'
         data_frame = pd.DataFrame([r for r in data['data']], columns=data_headers)
 
-    return data_frame
+    return clean_frame(data_frame)
 
-def extract_data_recursive(data, group_path=[]):
+def extract_group_data(data, group_headers=None, group_path=None):
     """
     Recursively extract data from nested group structure.
 
     Args:
         data: The data structure (dict)
+        group_headers: Optional list of group header names
         group_path: List to track the current group hierarchy
 
     Returns:
@@ -287,74 +281,44 @@ def extract_data_recursive(data, group_path=[]):
         df = pd.DataFrame(data['data'])
         # Add group columns for each level in the hierarchy
         for i, group_name in enumerate(group_path):
-            df[f'Group_Level_{i+1}'] = group_name
+            df[group_headers[i] if group_headers else f'Group_Level_{i+1}'] = group_name
         dfs.append(df)
 
     # Check if this level has 'groups' key (intermediate node)
     elif 'groups' in data:
+        if group_path is None:
+            group_path = []
         for group_name, group_info in data['groups'].items():
             # Recursively process each group, adding current group to path
-            sub_dfs = extract_data_recursive(group_info, group_path + [group_name])
+            sub_dfs = extract_group_data(group_info, group_headers, group_path + [group_name])
             dfs.extend(sub_dfs)
 
     return dfs
 
-
-
-def payload_to_frame(responseResult):
+def clean_frame(df:pd.DataFrame) -> pd.DataFrame:
     """
-
+    Cleans a data frame by dropping duplicate columns and transforming percentage numeric returns from integer
+    based outputs to floats.
     Args:
-        responseResult: response dictionary from an api request.
+        df: A data frame to process.
 
-    Returns:
-        payload results from the api response as a frame
+    Returns: A data frame cleaned of duplicated columns and transformed percentage numeric values.
+
     """
-    version = responseResult['Payload'][0]['version']
+    # drop duplicate columns
+    df = df.loc[:, ~df.columns.duplicated(keep='last')]
 
-    if version == 'v1':
-        try:
-            payload = responseResult['Payload']
-            payload_frame = lk_api_data_to_frames(payload)
-            return payload_frame
-        except:
-            print("No payload data returned")
-    else:
-        try:
-            payload = responseResult['Payload']
-            payload_frame = lk_api_data_to_frames(payload)
-            return payload_frame
-        except:
-            print("No payload data returned")
+    # clean up percentage columns
+    pct_columns = [column for column, dtype in list(df.dtypes.to_dict().items())
+                   if dtype.kind == 'f' and column.endswith(' %')]
+    if pct_columns:
+        df[pct_columns] /= 100.0
+
+    return df
 
 #---------------
 # Basic Client
 #---------------
-def get_datetime(iso_time_string):
-    """
-    Converts an ISO formatted time string into a datetime object.
-
-    Args:
-        iso_time_string (str): A string representing a date and time in ISO 8601 format
-                                (e.g., "2023-10-26T10:30:00" or "2023-10-26").
-
-    Returns:
-        datetime: A datetime object extracted from the ISO string.
-                       Returns None if the string is not a valid ISO format
-                       or if any other error occurs during parsing.
-    """
-    try:
-        # Parse the ISO formatted string into a datetime object
-        datetime_obj = pd.to_datetime(iso_time_string)
-        # Extract and return only the date part
-        return datetime_obj
-    except ValueError:
-        print(f"Error: The provided string '{iso_time_string}' is not a valid ISO format or is otherwise unparseable.")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return None
-
 def get_auth_token(environment:str, hostname:str, username:str, password:str, **kwargs) -> str:
     """
     Generates an authorization token from Cognito using the supplied username and password. Tokens are valid for
@@ -401,7 +365,7 @@ def make_api_request(url:str, username:str, password:str,):
         api_headers["Authorization"] = token
         response = requests.get(url, headers=api_headers)
 
-    return response.json()
+    return response
 
 if __name__ == "__main__":
 
@@ -418,18 +382,20 @@ if __name__ == "__main__":
     api_response = make_api_request(**CONFIG)
 
     # access main data
-    payload = api_response.get("Payload")
-    frames = lk_api_response_to_frames(payload)
+    frames = lk_api_response_to_frames(api_response)
     print(frames)
     print("------ end of frames ------")
 
     # in addition, you can also access additional metadata
-    version = CURRENT_VERSION  # or 1 based on the API version
+    api_response_json = api_response.json()
+    payload = api_response_json.get("Payload")
     if payload is not None and len(payload) >= 1:
-        version = payload[0].get("version", CURRENT_VERSION)
+        version = payload[0].get("version")
+    else:
+        version = None
 
-    responseId = api_response.get("ResponseId")
-    timestamp = api_response.get("TimeStamp")
+    responseId = api_response_json.get("ResponseId")
+    timestamp = api_response_json.get("TimeStamp")
 
     print("Response ID:", responseId)
     print("TimeStamp:", timestamp)
@@ -437,10 +403,10 @@ if __name__ == "__main__":
     print("---------------------------")
 
     # portfolio dates
-    portfolioDetails = api_response.get("PortfolioDetails")
-    lastDate = get_datetime(portfolioDetails.get("LastDate"))
-    firstDate = get_datetime(portfolioDetails.get("FirstDate"))
-    lastUpdated = get_datetime(portfolioDetails.get("LastUpdated"))
+    portfolioDetails = api_response_json.get("PortfolioDetails")
+    lastDate = pd.to_datetime(portfolioDetails.get("LastDate"))
+    firstDate = pd.to_datetime(portfolioDetails.get("FirstDate"))
+    lastUpdated = pd.to_datetime(portfolioDetails.get("LastUpdated"))
 
     print("Portfolio First Date:", firstDate)
     print("Portfolio Last Date:", lastDate)
@@ -448,7 +414,7 @@ if __name__ == "__main__":
     print("---------------------------")
 
     # Request details
-    requestDetails = api_response.get("RequestDetails")
+    requestDetails = api_response_json.get("RequestDetails")
     requestPath = requestDetails.get("Path")
     queryString = requestDetails.get("QueryString")
     queryParams = requestDetails.get("QueryParameters")
