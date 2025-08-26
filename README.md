@@ -31,7 +31,7 @@ Prior to running any of those commands, you'll be provided with a `client_id`, a
 The python client can be imported and run.
 
 ```python
-from client.python import lkapi
+import lkapi
 
 lkapi.make_api_request(url="https://YOUR-LIGHTKEEPER-ENVIRONMENT.COM/lightstation/api/reports/query/layout/Portfolio_Grid__user@lightkeeper.com/v1?bd=YYYYMMDD&ed=YYYYMMDD&focus=PORT&rollup=ROLLUP", username="CLIENT_ID_XXXXXX", password="CLIENT_SECRET_XXXXXXX")
 ```
@@ -39,7 +39,7 @@ lkapi.make_api_request(url="https://YOUR-LIGHTKEEPER-ENVIRONMENT.COM/lightstatio
 or run from the CLI after passing the appropriate URL, client ID and client secret variables to `lkapi.py`
 
 ```bash
-cd client/python/
+cd lkapi/
 python lkapi.py
 ```
 
