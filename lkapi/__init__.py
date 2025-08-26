@@ -1,1 +1,1 @@
-from .lkapi import *
+from .lkapi import lkapi
