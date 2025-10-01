@@ -6,28 +6,16 @@
 # All rights reserved.
 #
 """
-Example code for processing Web API JSON data objects into pandas data frames.  The data returned from the
+Methods for processing Web API JSON data objects into pandas data frames.  The data returned from the
 REST API is designed to be "complete" for the date range requested returning "rollup", "time", and "group"
-information.  The API calls fully respects the settings of the requested view (e.g. filters and groups will be applied
-as seen in the view).
-  + **rollup**: Data at the specified granularity requested summarized for *the entire time period** using per statistic
-                net time summaries selected in the UI view.
-  + **groups**: Summarized data for the specified groupings aggregated across rollup and time by the statistics net
-               summaries.  If no groups are specified this will default to the full portfolio summary.
-  + **time**: Data at the specified time granularity summarized for *all rollups* using per statistic net item
-              summaries.
-To retrieve all rollups per time period (e.g. all holdings in a day), use multiple web requests, adjusting the dates,
-and combined the resulting data.
+information.
 """
 import json
 import typing
 import collections
-import urllib.parse
 
 import requests
 import pandas as pd
-
-CURRENT_VERSION = 2  # The current version of the API we are using
 
 def lk_api_response_to_frames(response:typing.Union[str, typing.List[typing.Dict[str, typing.Any]], requests.Response]) -> typing.Optional[typing.Dict[str, pd.DataFrame]]:
     """
@@ -315,122 +303,3 @@ def clean_frame(df:pd.DataFrame) -> pd.DataFrame:
         df[pct_columns] /= 100.0
 
     return df
-
-#---------------
-# Basic Client
-#---------------
-def get_auth_token(environment:str, hostname:str, username:str, password:str, **kwargs) -> str:
-    """
-    Generates an authorization token from Cognito using the supplied username and password. Tokens are valid for
-    one hour. A 401 Token Expired will be returned if they time out.  Tokens can be refreshed with another request
-    to the auth server.
-    Args:
-        environment: The environment you are connecting (e.g. see)
-        username: The user identifier.
-        password: The user password.
-    Returns: An authentication token to use as a bearer token in authorization headers for API requests.
-    """
-    auth_data = {
-        "grant_type": "client_credentials",
-        "client_id": username,
-        "client_secret": password
-    }
-    # we are splitting to accommodate dev-see, beta-see, and see
-    apiAuthHostname = f'{environment.split("-")[-1]}.{".".join(hostname.split(".")[1:])}'
-    auth_response = requests.post(f"https://api.auth.{apiAuthHostname}/oauth2/token", data=auth_data).json()
-    return f"{auth_response['token_type']} {auth_response['access_token']}"
-
-def make_api_request(url:str, username:str, password:str,):
-    """
-    Makes an API request to a server returning a dictionary of frames for the data.
-    Args:
-        url: The url string to query which was copied from the LK UI.
-        username: The user identifier.
-        password: The user password.
-    Returns:
-    """
-    url_parse = urllib.parse.urlparse(url)
-    hostname = url_parse.netloc
-    environment = hostname.split('.')[0]
-
-    token = get_auth_token(environment=environment, hostname=hostname, username=username, password=password)
-    api_headers = {"Authorization": token}
-
-    response = requests.get(url, headers=api_headers)
-
-    # Tokens are valid for one hour ... check for a 401 Token Expired if they time out
-    if response.status_code == 401 and response.json()['detail'] == "Token Expired":
-        print("Token expired. Refreshing token...")
-        token = get_auth_token(environment=environment, username=username, password=password)
-        api_headers["Authorization"] = token
-        response = requests.get(url, headers=api_headers)
-
-    return response
-
-if __name__ == "__main__":
-
-    CONFIG = {
-        # You can get an API url by logging into the UI and navigating to:
-        # Grid > Api Routes
-        # Replace the API url as appropriate
-        "url": "XXXXXXXXXXX",
-        # Paste you client ID (username)/secret (password) here or load from environment variables.
-        "username": "XXXXXXXXXXXX",
-        "password": "XXXXXXXXXXXXXXXXX"
-    }
-
-    api_response = make_api_request(**CONFIG)
-
-    # access main data
-    frames = lk_api_response_to_frames(api_response)
-    print(frames)
-    print("------ end of frames ------")
-
-    # in addition, you can also access additional metadata
-    api_response_json = api_response.json()
-    payload = api_response_json.get("Payload")
-    if payload is not None and len(payload) >= 1:
-        version = payload[0].get("version")
-    else:
-        version = None
-
-    responseId = api_response_json.get("ResponseId")
-    timestamp = api_response_json.get("TimeStamp")
-
-    print("Response ID:", responseId)
-    print("TimeStamp:", timestamp)
-    print("Api Version:", version)
-    print("---------------------------")
-
-    # portfolio dates
-    portfolioDetails = api_response_json.get("PortfolioDetails")
-    lastDate = pd.to_datetime(portfolioDetails.get("LastDate"))
-    firstDate = pd.to_datetime(portfolioDetails.get("FirstDate"))
-    lastUpdated = pd.to_datetime(portfolioDetails.get("LastUpdated"))
-
-    print("Portfolio First Date:", firstDate)
-    print("Portfolio Last Date:", lastDate)
-    print("Portfolio Last Updated:", lastUpdated)
-    print("---------------------------")
-
-    # Request details
-    requestDetails = api_response_json.get("RequestDetails")
-    requestPath = requestDetails.get("Path")
-    queryString = requestDetails.get("QueryString")
-    queryParams = requestDetails.get("QueryParameters")
-
-    print("Request Path:", requestPath)
-    print("Request QueryString:", queryString)
-    print("Request Parameters:", queryParams)
-    print("---------------------------")
-
-    # get specific query parameter values
-    portfolioId = queryParams.get("focus")
-    bd = queryParams.get("bd")
-    ed = queryParams.get("ed")
-
-    print("Portfolio ID:", portfolioId)
-    print("Begin date:", bd)
-    print("End date:", ed)
-
-

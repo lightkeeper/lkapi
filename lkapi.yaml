@@ -1,0 +1,186 @@
+
+openapi: 3.0.3
+info:
+  title: Lightkeeper API
+  description: API for retrieving data from Lightkeeper via referenced grid layouts.
+  version: 2.0.0
+  contact:
+    url: https://www.lightkeeper.com
+
+paths:
+  /reports/query/layout/{layoutId}/v2:
+    get:
+      summary: get data from grid layout
+      description: Retrieves data from a specified grid layout in Lightkeeper by portfolio focus, dates, and rollup aggregation.
+      operationId: getInstrumentReturns
+      tags:
+        - Reports
+      parameters:
+        - name: layoutId
+          in: path
+          required: true
+          description: The layout identifier (e.g., InstrumentReturns)
+          schema:
+            type: string
+            example: "InstrumentReturns"
+        - name: focus
+          in: query
+          required: false
+          description: Portfolio focus identifier
+          schema:
+            type: string
+            example: "SYNTHETICO"
+        - name: rollup
+          in: query
+          required: false
+          description: Rollup aggregation type
+          schema:
+            type: string
+            example: "ISSUER"
+      responses:
+        '200':
+          description: Successful response with data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ResponseId:
+                    type: string
+                    example: "251001-041709"
+                  TimeStamp:
+                    type: string
+                    format: date-time
+                    example: "2024-08-01T04:17:09.465223Z"
+                  RequestDetails:
+                    type: object
+                    properties:
+                      Path:
+                        type: string
+                        example: "/reports/query/layout/InstrumentReturns/v2"
+                      QueryString:
+                        type: string
+                        example: "?focus=SYNTHETICO&rollup=ISSUER"
+                      QueryParameters:
+                        type: object
+                        properties:
+                          focus:
+                            type: string
+                            example: "SYNTHETICOT"
+                          rollup:
+                            type: string
+                            example: "ISSUER"
+                  PortfolioDetails:
+                    type: object
+                    properties:
+                      FirstDate:
+                        type: string
+                        format: date-time
+                        example: "2010-05-04T00:00:00"
+                      LastDate:
+                        type: string
+                        format: date-time
+                        example: "2025-07-30T00:00:00"
+                      LastUpdated:
+                        type: string
+                        format: date-time
+                        example: "2025-07-31T19:49:55"
+                  Payload:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        version:
+                          type: integer
+                          example: 2
+                        rollup:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: "InstrumentReturns: Rollup"
+                            data:
+                              type: array
+                              items:
+                                type: array
+                                items:
+                                  oneOf:
+                                    - type: string
+                                    - type: number
+                              example: ["AAPL", 0.123, 1.456, 150.5, 2.5]
+                            totals:
+                              type: array
+                              items:
+                                type: number
+                              example: [10.86, 24.28, 142.94, 3.24]
+                        time:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: "InstrumentReturns: Time"
+                            data:
+                              type: array
+                              items:
+                                type: array
+                                items:
+                                  oneOf:
+                                    - type: string
+                                    - type: number
+                              example: ["2025-01-01T00:00:00", -0.00003612, 33.27, 171.89, 0.0]
+                            totals:
+                              type: array
+                              items:
+                                type: number
+                              example: [10.86, 24.28, 142.94, 3.24]
+                        headers:
+                          type: array
+                          items:
+                            type: string
+                          example: ["Issuer", "P&L Δ (Total) %", "Delta adjusted net exposure (Avg excl zero) %", "Instrument Price (End)", "Instrument return Δ (Total) %"]
+                        id:
+                          type: string
+                          example: "731676bc"
+                        layoutId:
+                          type: string
+                          example: "InstrumentReturns"
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid query parameters"
+        '401':
+          description: Unauthorized - authentication required
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Authentication required"
+        '404':
+          description: Layout or portfolio not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Layout not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Internal server error"
