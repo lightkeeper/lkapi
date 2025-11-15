@@ -92,7 +92,6 @@ def build_api_url(url:typing.Optional[str]=None,
                   grid:typing.Optional[str]=None, domain:typing.Optional[str]=None,
                   environment:typing.Optional[str]=None, mode:typing.Optional[str]=None,
                   begin_date:typing.Optional[typing.Any]=None, end_date:typing.Optional[typing.Any]=None,
-                  date_snap:typing.Optional[str]=None,
                   portfolio:typing.Optional[str]=None, rollup:typing.Optional[str]=None,
                   credential_manager:typing.Optional[lkcred.CredentialManager]=None,
                   api_version:typing.Optional[int]=None) -> str:
@@ -105,9 +104,8 @@ def build_api_url(url:typing.Optional[str]=None,
         domain: The domain name to use for the request.  If not provided, the default credential manager domain will be used.
         environment: The environment name to use for the request.  If not provided, the default credential manager environment will be used.
         mode: The mode name to use for the request.  If not provided, no mode will be used.
-        begin_date: The beginning date for the request in YYYY-MM-DD format.
-        end_date: The end date for the request in YYYY-MM-DD format.
-        date_snap: The date snap to use for the request.  If provided, begin_date and end_date will be ignored.
+        begin_date: The beginning date for the request in YYYYMMDD format.
+        end_date: The end date for the request in YYYYMMDD format.
         portfolio: The portfolio ID to use for the request.  If not provided, the default portfolio for the user will be used.
         rollup: The rollup/granularity to use for the request.  If not provided, the default rollup for the view will be used.
         credential_manager: The credential manager to use to securely retrieve credentials. If provided, it will override
@@ -125,33 +123,46 @@ def build_api_url(url:typing.Optional[str]=None,
 
     if credential_manager is None:
         credential_kwargs = url_parts.copy()
-        credential_kwargs[DOMAIN_FIELD] = domain
-        credential_kwargs[ENVIRONMENT_FIELD] = environment
+        if domain is not None:
+            credential_kwargs[DOMAIN_FIELD] = domain
+        if environment is not None:
+            credential_kwargs[ENVIRONMENT_FIELD] = environment
         credential_manager = lkcred.get_credential_manager_from_kwargs(**credential_kwargs)
+    if credential_manager.domain:
         url_parts[DOMAIN_FIELD] = credential_manager.domain
+    if credential_manager.environment:
         url_parts[ENVIRONMENT_FIELD] = credential_manager.environment
 
+    if domain is not None:
+        url_parts[DOMAIN_FIELD] = domain
+    if environment is not None:
+        url_parts[ENVIRONMENT_FIELD] = environment
     if mode is not None:
         url_parts[MODE_FIELD] = mode
-
     if grid is not None:
         url_parts[GRID_FIELD] = grid
-
     if portfolio is not None:
         url_parts['portfolio'] = portfolio
+
     if not url_parts.get('portfolio'):
         raise ValueError("A portfolio ID must be provided either in the url or as a parameter.")
 
-    base_url_parts = [url_parts.get(ENVIRONMENT_FIELD)] if url_parts.get(ENVIRONMENT_FIELD) else [] + [url_parts.get(DOMAIN_FIELD)]
-    base_url = '.'.join(url_parts[ENVIRONMENT_FIELD]) if url_parts.get(ENVIRONMENT_FIELD) else base_url_parts[0]
+    base_url_parts = ([url_parts[ENVIRONMENT_FIELD]] if url_parts.get(ENVIRONMENT_FIELD) else []) + [url_parts[DOMAIN_FIELD]]
+    base_url = '.'.join(base_url_parts)
     if url_parts.get(MODE_FIELD):
         base_url = f"{url_parts[MODE_FIELD]}-{base_url}"
     api_url = f"https://{base_url}/lightstation/api/reports/query/layout/{url_parts[GRID_FIELD]}/v{api_version or CURRENT_API_VERSION}?focus={url_parts['portfolio']}"
 
     if begin_date is not None:
-        api_url += f"&{BEGIN_DATE_FIELD}={begin_date}"
+        api_url += f"&{BEGIN_DATE_FIELD}={pd.to_datetime(begin_date).strftime('%Y%m%d')}"
+    elif BEGIN_DATE_FIELD in url_parts:
+        api_url += f"&{BEGIN_DATE_FIELD}={url_parts[BEGIN_DATE_FIELD]}"
+
     if end_date is not None:
-        api_url += f"&{END_DATE_FIELD}={end_date}"
+        api_url += f"&{END_DATE_FIELD}={pd.to_datetime(end_date).strftime('%Y%m%d')}"
+    elif END_DATE_FIELD in url_parts:
+        api_url += f"&{END_DATE_FIELD}={url_parts[END_DATE_FIELD]}"
+
     if rollup is not None:
         api_url += f"&{ROLLUP_FIELD}={rollup}"
 
@@ -233,54 +244,7 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
     frame_data = {}
 
     data_version = data['version']
-
-    if data_version == 1:
-        for key in ['rollup', 'time', 'net', 'groups']:
-            keyFrame = lk_layout_data_to_frame_v1(data[key])
-            if keyFrame is not None:
-                frame_data[key] = keyFrame
-        if not frame_data:
-            # empty data set ... return None to skip in upstream processing
-            return None
-        if 'groups' in frame_data:
-            # adjust the net information to include the additional columns for groups
-            group_cols = frame_data['groups'].columns.to_list()[:-1 *len(frame_data['net'].columns)]
-            frame_data['net'] = pd.concat([pd.DataFrame({col: [""] * len(frame_data['net']) for col in group_cols}),
-                                           frame_data['net']], axis=1)
-
-            # combine with net data for complete information
-            frame_items = []
-            net_frame = frame_data.pop('net')
-            if len(net_frame) > 0:
-                net_frame.columns = frame_data['groups'].columns.to_list()[-1 *len(net_frame.columns):]
-                frame_items.append(net_frame)
-            if len(frame_data['groups']) > 0:
-                frame_items.append(frame_data['groups'])
-            frame_data['groups'] = pd.concat(frame_items).reset_index(drop=True)
-
-            # add in level information
-            frame_data['groups'] = pd.concat([pd.DataFrame({'level': [0] * len(frame_data['groups'])}),
-                                              frame_data['groups']], axis=1)
-            for group_col in group_cols:
-                frame_data['groups'].loc[frame_data['groups'][group_col] != "", 'level'] += 1
-
-            frame_data['groups'].sort_values(['level'] + group_cols, inplace=True)
-            frame_data['groups'].reset_index(drop=True, inplace=True)
-
-            # don't bother keeping a level column if it is not interesting
-            if frame_data['groups']['level'].sum() == 0:
-                frame_data['groups'].drop('level', axis=1, inplace=True)
-
-            # add group column names back to the time series for consistency if there are rows of groups
-            group_rows = data['groups']['rows']
-            if len(group_rows) > 0:
-                frame_data['time'].columns = group_cols + frame_data['time'].columns.to_list()[len(group_cols):]
-        else:
-            frame_data['groups'] = frame_data.pop('net')
-        if 'time' in frame_data:
-            # convert time information
-            frame_data['time']['Date'] = pd.to_datetime(frame_data['time']['Date'])
-    elif data_version == 2:
+    if data_version == 2:
         for key in ['rollup', 'time', 'total']:
             headers = data['headers']
             if key == 'total':
@@ -307,54 +271,6 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
         raise RuntimeError(f'Unknown layout block version: {data_version}')
 
     return frame_data
-
-# ---- Version 1.0
-def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFrame:
-    """
-    Converts an inner Lightkeeper layout data dictionary to simplified frame object for later processing.  This function
-    pays special attention to data depth, and provides a flattened frame by "level" for later processing.
-    Args:
-        data: A inner data dictionary such as rollup from V1 of the layout API.
-    Returns: A data frame of the provided data.
-    """
-    data_type = data['type']
-    data_depth = data['depth']
-    data_headers = data['headers']
-    if data_type == 'Net' and data_headers[0] == 'Total':
-        # drop the total since it isn't helpful
-        data_headers = data_headers[1:]
-
-    data_frame = pd.DataFrame([r['data'] for r in data['rows']], columns=data_headers)
-
-    # if the depth is greater than 1 we will need to process the path frame for the first column ... adjust the headers
-    if data_depth > 1  and data_type != 'Net':
-        path_headers = data_headers[0].split(' / ')
-        if len(path_headers) == 1:
-            # fill in dummy variables for missing path details
-            path_headers = [f'Level{l + 1}' for l in range(len(data['rows'][0]['path']) - 1)] + path_headers
-        # create a new copy of data headers to avoid clobbering
-        data_headers = [path_headers.pop()] + data_headers[1:]
-        # instrument is the default rollup so not title cased ... correct that
-        if data_headers[0] == 'instrument':
-            data_headers[0] = 'Instrument'
-        data_frame.columns = data_headers
-
-        path_rows = [r['path'] for r in data['rows']]
-        if data_type == 'Groups':
-            # In groups the data is sparse, so pad the path data as necessary to get to the total
-            path_rows = [(r + ([""] * (len(path_headers) - len(r))))
-                         if len(r) < len(path_headers) else r for r in path_rows]
-            path_frame = pd.DataFrame(path_rows, columns=path_headers)
-            # We will not keep the first column from the data rows
-            data_frame.drop(data_frame.columns[0], axis=1, inplace=True)
-        else:
-            # The last element of the path is also included in the frame.  For Instrument, it is a Lightkeeper Id in the
-            # path, and a clean Symbol in the data rows, so we will keep the data row information.
-            path_frame = pd.DataFrame(path_rows, columns=path_headers + ['__drop__'])
-            path_frame.drop('__drop__', axis=1, inplace=True)
-        data_frame = pd.concat([path_frame, data_frame], axis=1)
-
-    return data_frame
 
 # ---- Version 2.0
 def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers) -> pd.DataFrame:
