@@ -15,6 +15,7 @@ import typing
 import collections
 
 import requests
+import numpy as np
 import pandas as pd
 
 PAYLOAD_FIELD = 'Payload'
@@ -317,6 +318,9 @@ def extract_group_data(data, group_headers=None, group_path=None):
 
     return dfs
 
+#---------------
+# Tools
+#---------------
 def clean_frame(df:pd.DataFrame) -> pd.DataFrame:
     """
     Cleans a data frame by dropping duplicate columns and transforming percentage numeric returns from integer
@@ -336,4 +340,85 @@ def clean_frame(df:pd.DataFrame) -> pd.DataFrame:
     if pct_columns:
         df = df.assign(**{col: df[col] / 100.0 for col in pct_columns})
 
+    if 'Date' in df.columns and df['Date'].dtype == 'O':
+        df['Date'] = pd.to_datetime(df['Date'])
+
     return df
+
+def extract_temporal_field(df:pd.DataFrame, field:str, rollup:str=None) -> pd.DataFrame:
+    """
+    Extracts a temporal field from a data frame into a frame of rollups as columns and dates as rows.
+
+    Args:
+        df: A data frame to process.
+        field: The field name to extract temporally.
+        rollup: An optional rollup column name to use for grouping.
+
+    Returns: A data frame of rollups as columns and dates as rows for a given field
+
+    """
+    if field not in df.columns:
+        raise RuntimeError(f'Field {field} not found in data frame columns.')
+    if 'Date' not in df.columns:
+        raise RuntimeError(f'Date column not found in data frame columns.')
+    if rollup is None:
+        rollup = [col for col, kind in df.dtypes.to_dict().items() if kind == 'O']
+        if not rollup:
+            raise RuntimeError(f'No rollup column found in data frame for temporal extraction.')
+        rollup = rollup[0]
+    if rollup not in df.columns:
+        raise RuntimeError(f'Rollup column {rollup} not found in data frame columns.')
+
+    keys = ['Date', rollup]
+    rf = df[keys + [field]].set_index(keys).unstack()
+    rf.columns = rf.columns.get_level_values(1)
+    rf.columns.name = None
+    return rf
+
+def extract_temporal_holdings(df:pd.DataFrame, rollup:str=None) -> pd.DataFrame:
+    """
+    Extracts a temporal holdings from a data frame by dropping rows without tags such as Direction.
+
+    Args:
+        df: A data frame to process.
+        rollup: An optional rollup column name to use for grouping.
+
+    Returns: A data frame filtered to holdings rather than complete rows for the time range.
+
+    """
+    tag_cols = [col for col, kind in df.dtypes.to_dict().items() if kind == 'O']
+    if not tag_cols:
+        raise RuntimeError(f'No tag column found in data frame for temporal holdings extraction.')
+    if rollup is None:
+        rollup = tag_cols.pop(0)
+    else:
+        tag_cols = [col for col in tag_cols if col != rollup]
+
+    if not tag_cols:
+        raise RuntimeError(f'No tag column found in data frame for temporal holdings extraction.')
+    # filter to rows where at least one tag column is not a blank
+    all_empty = [df[col] == "" for col in tag_cols]
+    filter_mask = ~pd.concat(all_empty, axis=1).all(axis=1)
+    return df[filter_mask]
+
+def correlate_temporal_field(df:pd.DataFrame, field:str, rollup:str=None, half=['lower', 'upper', None][-1]) -> pd.DataFrame:
+    """
+    Produces a correlation matrix for a temporal field by rollup.
+
+    Args:
+        df: A data frame to process.
+        field: The field name to extract temporally.
+        rollup: An optional rollup column name to use for grouping.
+        half: Optionally return only the 'lower' or 'upper' half of the correlation matrix.
+
+    Returns: A correlation data frame
+
+    """
+    temporal_frame = extract_temporal_field(df, field, rollup)
+    corr = temporal_frame.corr(method="pearson").dropna(axis=1, how='all').dropna(axis=0, how='all')
+    if half:
+        if half == 'lower':
+            corr = corr.where(np.tril(np.ones(corr.shape), k=0).astype(bool))
+        elif half == 'upper':
+            corr = corr.where(np.triu(np.ones(corr.shape), k=0).astype(bool))
+    return corr
