@@ -2,7 +2,7 @@
 import os
 import json
 import pytest
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, MagicMock
 
 # Mock keyring before it's imported by the module under test
 # This allows testing KeyringCredentialManager without having the library installed

@@ -43,6 +43,19 @@ class CredentialManager(object, metaclass=abc.ABCMeta):
         env_key_parts.append(self.domain.upper())
         self.env_key = '__'.join(env_key_parts)
 
+    @property
+    def hostname(self) -> str:
+        """
+        The API hostname based on the stored environment and domain.
+
+        Returns: The API hostname string.
+
+        """
+        if self.environment:
+            return f"{self.environment}.{self.domain}"
+        else:
+            return self.domain
+
     # --- helper functions
     @classmethod
     def get_cred_data_from_url(cls, url: str) -> typing.Dict[str, str]:
@@ -281,8 +294,7 @@ def get_auth_token(credential_manager:typing.Optional[CredentialManager]=None, *
         "client_secret": cred_data['client_secret'],
     }
     # we are splitting to accommodate dev-see, beta-see, and see
-    api_auth_hostname = '.'.join([p for p in [credential_manager.environment, credential_manager.domain]])
-    auth_response = requests.post(f"https://api.auth.{api_auth_hostname}/oauth2/token", data=auth_data)
+    auth_response = requests.post(f"https://api.auth.{credential_manager.hostname}/oauth2/token", data=auth_data)
     if auth_response.status_code != 200:
         if auth_response.status_code == 400 and 'invalid_client' in auth_response.text:
             raise PermissionError("Invalid client credentials provided.")

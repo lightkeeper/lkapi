@@ -46,20 +46,22 @@ def make_api_request(url:typing.Optional[str]=None, grid:typing.Optional[str]=No
     """
     if credential_manager is None:
         credential_manager = lkcred.get_credential_manager_from_kwargs(url=url, environment=environment, **kwargs)
-    token = lkcred.get_auth_token(url=url, credential_manager=credential_manager, **kwargs)
+
+    # construct the URL details
+    used_url = lkparser.build_api_url(url, grid=grid, credential_manager=credential_manager, **kwargs)
+
+    token = lkcred.get_auth_token(url=used_url, credential_manager=credential_manager, **kwargs)
     api_headers = {"Authorization": token}
 
-    used_url = build_api_url(url, grid=grid, credential_manager=credential_manager, **kwargs)
     if debug:
         print(f"Making API request to URL: {used_url}")
     response = requests.get(used_url, headers=api_headers)
 
     # Tokens are valid for one hour ... check for a 401 Token Expired if they time out
     if response.status_code == 401 and response.json()['detail'] == "Token Expired":
-        print("Token expired. Refreshing token...")
-        token = lkcred.get_auth_token(url=url, environment=environment, credential_manager=credential_manager, **kwargs)
-        api_headers["Authorization"] = token
-        response = requests.get(url, headers=api_headers)
+        token = lkcred.get_auth_token(url=used_url, environment=environment, credential_manager=credential_manager, **kwargs)
+        api_headers = {"Authorization": token}
+        response = requests.get(used_url, headers=api_headers)
 
     if debug:
         return response
