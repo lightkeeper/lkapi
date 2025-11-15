@@ -9,8 +9,7 @@ If you'd like to know more about API access to your existing Lightkeeper environ
 
 To access the Lightkeeper API, regardless of programming language, you will need a `client_id`, and `client_secret` from Lightkeeper.  These credentials are required to make requests against your Lightkeeper environment.
 
-[There's more detailed documentation provided in `lkapi.py` directly](https://github.com/lightkeeper/lkapi/blob/9af7807e0e2e787afe504d18ee3d88834794824a/client/python/lkapi.py#L7-L20).
-
+The python directory includes a supported API client that intereacts with API data via pandas data frames. If you would like to build your own client in a different language `lkapi.yaml` provides an [OpenApi](https://www.openapis.org/) specification. Do note that the OAuth2 workflow does not naturally embed in OpenAPI client so extra coding work around retrieving the bearer token will need to be implemented in the native client language.
 
 ## Contributing
 
