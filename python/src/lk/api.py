@@ -65,6 +65,9 @@ def parse_api_url(url: str) -> typing.Dict[str, typing.Union[str,int]]:
         query_params = query.split('&')
         for param in query_params:
             key_value = param.split('=')
+            # we will use the term 'portfolio' rather than 'focus' internally
+            if key_value[0] == 'focus':
+                key_value[0] = 'portfolio'
             if len(key_value) == 2:
                 parsed_url[key_value[0]] = key_value[1]
     except Exception as e:
@@ -75,7 +78,7 @@ def parse_api_url(url: str) -> typing.Dict[str, typing.Union[str,int]]:
 def build_api_url(url:typing.Optional[str]=None,
                   grid:typing.Optional[str]=None, domain:typing.Optional[str]=None,
                   environment:typing.Optional[str]=None, mode:typing.Optional[str]=None,
-                  begin_date:typing.Optional[str]=None, end_date:typing.Optional[str]=None,
+                  begin_date:typing.Optional[typing.Any]=None, end_date:typing.Optional[typing.Any]=None,
                   date_snap:typing.Optional[str]=None,
                   portfolio:typing.Optional[str]=None, rollup:typing.Optional[str]=None,
                   credential_manager:typing.Optional[lkcred.CredentialManager]=None,
@@ -126,10 +129,10 @@ def build_api_url(url:typing.Optional[str]=None,
     if not url_parts.get('portfolio'):
         raise ValueError("A portfolio ID must be provided either in the url or as a parameter.")
 
-    base_url = '.'.join([url_parts['domain'], url_parts['environment']])
+    base_url = '.'.join([url_parts['environment'], url_parts['domain']])
     if url_parts.get('mode'):
         base_url = f"{url_parts['mode']}-{base_url}"
-    api_url = f"{base_url}/api/v{api_version or CURRENT_VERSION}/data/grid/{url_parts['grid']}?focus={url_parts['portfolio']}"
+    api_url = f"https://{base_url}/lightstation/api/reports/query/layout/{url_parts['grid']}/v{api_version or CURRENT_VERSION}?focus={url_parts['portfolio']}"
 
     if begin_date is not None:
         api_url += f"&bd={begin_date}"
@@ -146,7 +149,7 @@ def build_api_url(url:typing.Optional[str]=None,
 def make_api_request(url:typing.Optional[str]=None, grid:typing.Optional[str]=None,
                      environment:typing.Optional[str]=None,
                      credential_manager:typing.Optional[typing.Union[str, lkcred.CredentialManager]]=None,
-                     **kwargs):
+                     debug=False, **kwargs):
     """
     Makes a data grid API request to a server returning a dictionary of frames for the data.
     Args:
@@ -158,11 +161,13 @@ def make_api_request(url:typing.Optional[str]=None, grid:typing.Optional[str]=No
     Returns: A requests response object.
     """
     if credential_manager is None:
-        credential_manager = lkcred.get_credential_manager_from_kwargs(environment=environment, **kwargs)
+        credential_manager = lkcred.get_credential_manager_from_kwargs(url=url, environment=environment, **kwargs)
     token = lkcred.get_auth_token(url=url, credential_manager=credential_manager, **kwargs)
     api_headers = {"Authorization": token}
 
     used_url = build_api_url(url, grid=grid, credential_manager=credential_manager, **kwargs)
+    if debug:
+        print(f"Making API request to URL: {used_url}")
     response = requests.get(used_url, headers=api_headers)
 
     # Tokens are valid for one hour ... check for a 401 Token Expired if they time out
@@ -172,7 +177,12 @@ def make_api_request(url:typing.Optional[str]=None, grid:typing.Optional[str]=No
         api_headers["Authorization"] = token
         response = requests.get(url, headers=api_headers)
 
-    return response
+    if debug:
+        return response
+    else:
+        if response.status_code != 200:
+            raise ValueError(f"API request failed with status code {response.status_code}: {response.text}")
+        return lkparser.lk_api_response_to_frames(response)
 
 if __name__ == "__main__":
 

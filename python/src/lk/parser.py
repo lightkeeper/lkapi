@@ -17,6 +17,12 @@ import collections
 import requests
 import pandas as pd
 
+PAYLOAD_FIELD = 'Payload'
+RESPONSEID_FIELD = 'ResponseId'
+TIMESTAMP_FIELD = 'Timestamp'
+REQUEST_DETAILS_FIELD = 'RequestDetails'
+PORTFOLIO_DETAILS_FIELD = 'PortfolioDetails'
+
 def lk_api_response_to_frames(response:typing.Union[str, typing.List[typing.Dict[str, typing.Any]], requests.Response]) -> typing.Optional[typing.Dict[str, pd.DataFrame]]:
     """
     Parses an API json response string to a dictionary of pandas frames.
@@ -50,11 +56,11 @@ def lk_api_data_to_frames(data:typing.List[typing.Dict[str, typing.Any]]) -> typ
     # we are assuming layout json but if we could have different types in addition to different versions switch here
     data_type = 'layout'
     if data_type == 'layout':
-        if 'Payload' in data:
+        if PAYLOAD_FIELD in data:
             # -- layout API
-            blocks = [lk_layout_element_to_frames(block) for block in data['Payload']]
+            blocks = [lk_layout_element_to_frames(block) for block in data[PAYLOAD_FIELD]]
             if len(blocks) == 1:
-                return blocks[0]
+                parsed_data = blocks[0]
             else:
                 # join into a single frame
                 block_dict = collections.defaultdict(list)
@@ -63,9 +69,19 @@ def lk_api_data_to_frames(data:typing.List[typing.Dict[str, typing.Any]]) -> typ
                         continue
                     for key, frame in block.items():
                         block_dict[key].append(frame)
-                return {k: pd.concat(v, ignore_index=True) for k,v in block_dict.items()}
+                parsed_data = {k: pd.concat(v, ignore_index=True) for k,v in block_dict.items()}
         else:
-            raise RuntimeError(f'LK Layout API data missing: Payload')
+            raise RuntimeError(f'LK Layout API data missing: {PAYLOAD_FIELD}')
+        # fill in the metadata if it is present
+        if REQUEST_DETAILS_FIELD in data:
+            parsed_data['request'] = data[REQUEST_DETAILS_FIELD]
+            if TIMESTAMP_FIELD in data:
+                parsed_data['request'][TIMESTAMP_FIELD] = data[TIMESTAMP_FIELD]
+            if RESPONSEID_FIELD in data:
+                parsed_data['request'][RESPONSEID_FIELD] = data[RESPONSEID_FIELD]
+        if PORTFOLIO_DETAILS_FIELD in data:
+            parsed_data['portfolio'] = data[PORTFOLIO_DETAILS_FIELD]
+        return parsed_data
     else:
         raise RuntimeError(f'Unknown LK API data type: {data_type}')
 
@@ -128,9 +144,23 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
             # convert time information
             frame_data['time']['Date'] = pd.to_datetime(frame_data['time']['Date'])
     elif data_version == 2:
-        for key in ['rollup', 'time']:
+        for key in ['rollup', 'time', 'total']:
             headers = data['headers']
-            keyFrame = lk_layout_data_to_frame_v2(data[key], key, headers)
+            if key == 'total':
+                # totals are either in rollup or time
+                used_total_cols = [col for col in ['rollup', 'time'] if col in data]
+                if not used_total_cols:
+                    continue
+                used_total_data = data[used_total_cols[0]]
+                if 'totals' in used_total_data:
+                    key_data = used_total_data['totals']
+                elif 'groups' in used_total_data:
+                    key_data = [v['totals'] for v in used_total_data['groups'].values()]
+                else:
+                    continue
+            else:
+                key_data = data[key]
+            keyFrame = lk_layout_data_to_frame_v2(key_data, key, headers)
             if keyFrame is not None:
                 frame_data[key] = keyFrame
         if not frame_data:
@@ -201,11 +231,7 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
         data: A inner data dictionary such as rollup from V1 of the layout API.
     Returns: A data frame of the provided data.
     """
-    is_grouped = "groups" in data.keys()
-
-    if data_type == 'Net' and data_headers[0] == 'Total':
-        # drop the total since it isn't helpful
-        data_headers = data_headers[1:]
+    is_grouped = "groups" in data.keys() if isinstance(data, dict) else False
 
     if is_grouped:
         group_headers = data_headers[0].split(' / ')
@@ -246,7 +272,15 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
     else:
         if data_type == 'time':
             data_headers[0] = 'Date'
-        data_frame = pd.DataFrame([r for r in data['data']], columns=data_headers)
+        if isinstance(data, list):
+            if isinstance(data[0], list):
+                base_data_type =data_headers[0].split(' / ')[0]
+                data_headers = [base_data_type] + data_headers[1:]
+                data_frame = pd.DataFrame(data, columns=data_headers)
+            else:
+                data_frame = pd.DataFrame([data], columns=data_headers[1:])
+        else:
+            data_frame = pd.DataFrame([r for r in data['data']], columns=data_headers)
 
     return clean_frame(data_frame)
 
@@ -300,6 +334,6 @@ def clean_frame(df:pd.DataFrame) -> pd.DataFrame:
     pct_columns = [column for column, dtype in list(df.dtypes.to_dict().items())
                    if dtype.kind == 'f' and column.endswith(' %')]
     if pct_columns:
-        df[pct_columns] /= 100.0
+        df = df.assign(**{col: df[col] / 100.0 for col in pct_columns})
 
     return df

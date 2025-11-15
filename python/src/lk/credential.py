@@ -37,7 +37,11 @@ class CredentialManager(object, metaclass=abc.ABCMeta):
             domain = domain or cred_data.get('domain')
         self.environment = environment
         self.domain = domain or 'lightkeeperhq.com'
-        self.env_key = f'{self.env_key_base.upper()}__{self.domain.upper()}'
+        env_key_parts = [self.env_key_base.upper()]
+        if self.environment:
+            env_key_parts.append(self.environment.upper())
+        env_key_parts.append(self.domain.upper())
+        self.env_key = '__'.join(env_key_parts)
 
     # --- helper functions
     @classmethod
@@ -220,7 +224,7 @@ def get_credential_manager(credential_manager:typing.Optional[typing.Union[str, 
         if isinstance(credential_manager, CredentialManager):
             return credential_manager
         elif isinstance(credential_manager, type):
-            # they passed a class
+            # working with passed a class
             credential_manager_class = credential_manager
         elif isinstance(credential_manager, str):
             # --- search for a matching class
@@ -232,6 +236,8 @@ def get_credential_manager(credential_manager:typing.Optional[typing.Union[str, 
                 raise TypeError(f"Credential manager {credential_manager} is not a valid type.")
         else:
             raise TypeError(f"Credential manager {credential_manager} is not a CredentialManager")
+    if credential_manager_class is None:
+        credential_manager_class = EnvironmentCredentialManager if KeyringCredentialManager is None else KeyringCredentialManager
     return credential_manager_class(**kwargs)
 
 
@@ -276,5 +282,10 @@ def get_auth_token(credential_manager:typing.Optional[CredentialManager]=None, *
     }
     # we are splitting to accommodate dev-see, beta-see, and see
     api_auth_hostname = '.'.join([p for p in [credential_manager.environment, credential_manager.domain]])
-    auth_response = requests.post(f"https://api.auth.{api_auth_hostname}/oauth2/token", data=auth_data).json()
-    return f"{auth_response['token_type']} {auth_response['access_token']}"
+    auth_response = requests.post(f"https://api.auth.{api_auth_hostname}/oauth2/token", data=auth_data)
+    if auth_response.status_code != 200:
+        if auth_response.status_code == 400 and 'invalid_client' in auth_response.text:
+            raise PermissionError("Invalid client credentials provided.")
+        raise RuntimeError(f"Error obtaining auth token: {auth_response.status_code} {auth_response.text}")
+    auth_response_json = auth_response.json()
+    return f"{auth_response_json['token_type']} {auth_response_json['access_token']}"
