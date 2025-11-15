@@ -4,19 +4,6 @@ import json
 import pytest
 from unittest.mock import patch, MagicMock
 
-# Mock keyring before it's imported by the module under test
-# This allows testing KeyringCredentialManager without having the library installed
-mock_keyring = MagicMock()
-# Simulate keyring being importable
-mock_keyring.get_password.return_value = None
-mock_keyring.set_password.return_value = None
-
-# We use a dictionary for sys.modules to mock the import
-# This ensures that when 'lk.credential' tries to 'import keyring', it gets our mock
-module_patch = patch.dict('sys.modules', {'keyring': mock_keyring})
-module_patch.start()
-
-# Now we can import the module that depends on the mocked keyring
 from lk.credential import (
     CredentialManager,
     ManualCredentialManager,
@@ -26,9 +13,6 @@ from lk.credential import (
     get_credential_manager_from_kwargs,
     get_auth_token
 )
-
-# Stop the patch after imports are done
-module_patch.stop()
 
 
 @pytest.fixture
@@ -130,10 +114,9 @@ class TestEnvironmentCredentialManager:
 
 
 class TestKeyringCredentialManager:
-    @patch('sys.modules', {'keyring': mock_keyring})
-    def test_set_secret(self, cred_data):
+    @patch('lk.credential.keyring', create=True)
+    def test_set_secret(self, mock_keyring, cred_data):
         """Test setting a secret using mocked keyring."""
-        mock_keyring.reset_mock()
         cm = KeyringCredentialManager()
         cm.set_secret(**cred_data)
         dump_cred_data = json.dumps(cm.build_cred_dict(**cred_data))
@@ -141,10 +124,9 @@ class TestKeyringCredentialManager:
             cm.env_key, cm.env_key, dump_cred_data
         )
 
-    @patch('sys.modules', {'keyring': mock_keyring})
-    def test_get_secret(self, cred_data):
+    @patch('lk.credential.keyring', create=True)
+    def test_get_secret(self, mock_keyring, cred_data):
         """Test getting a secret using mocked keyring."""
-        mock_keyring.reset_mock()
         cred_json = json.dumps(cred_data)
         mock_keyring.get_password.return_value = cred_json
         cm = KeyringCredentialManager()

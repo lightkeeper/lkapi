@@ -62,19 +62,19 @@ def parse_api_url(url: str) -> typing.Dict[str, typing.Union[str,int]]:
         base, query = url.split('?', 1)
         parts = base.split('/')
         if len(parts) >= 1 and parts[-1].startswith('v'):
-            parsed_url['api_version'] = int(parts[-1][1:])
+            parsed_url[API_VERSION_FIELD] = int(parts[-1][1:])
         if len(parts) >= 2:
-            parsed_url['grid'] = parts[-2]
+            parsed_url[GRID_FIELD] = parts[-2]
         if len(parts) >= 1:
             full_host = base.split('//')[1].split('/')[0]
             full_host_parts = full_host.split('.')
             if len(full_host_parts) > 1:
-                parsed_url['domain'] = ".".join(full_host_parts[-2:])
-            parsed_url['environment'] = ".".join(full_host_parts[:-2])
-        if parsed_url.get('environment') and '-' in parsed_url['environment']:
-            environment_parts = parsed_url['environment'].split('-')
-            parsed_url['mode'] = "-".join(environment_parts[:-1])
-            parsed_url['environment'] = environment_parts[-1]
+                parsed_url[DOMAIN_FIELD] = ".".join(full_host_parts[-2:])
+            parsed_url[ENVIRONMENT_FIELD] = ".".join(full_host_parts[:-2])
+        if parsed_url.get(ENVIRONMENT_FIELD) and '-' in parsed_url[ENVIRONMENT_FIELD]:
+            environment_parts = parsed_url[ENVIRONMENT_FIELD].split('-')
+            parsed_url[MODE_FIELD] = "-".join(environment_parts[:-1])
+            parsed_url[ENVIRONMENT_FIELD] = environment_parts[-1]
         query_params = query.split('&')
         for param in query_params:
             key_value = param.split('=')
@@ -125,35 +125,35 @@ def build_api_url(url:typing.Optional[str]=None,
 
     if credential_manager is None:
         credential_kwargs = url_parts.copy()
-        credential_kwargs['domain'] = domain
-        credential_kwargs['environment'] = environment
+        credential_kwargs[DOMAIN_FIELD] = domain
+        credential_kwargs[ENVIRONMENT_FIELD] = environment
         credential_manager = lkcred.get_credential_manager_from_kwargs(**credential_kwargs)
-        url_parts['domain'] = credential_manager.domain
-        url_parts['environment'] = credential_manager.environment
+        url_parts[DOMAIN_FIELD] = credential_manager.domain
+        url_parts[ENVIRONMENT_FIELD] = credential_manager.environment
 
     if mode is not None:
-        url_parts['mode'] = mode
+        url_parts[MODE_FIELD] = mode
 
     if grid is not None:
-        url_parts['grid'] = grid
+        url_parts[GRID_FIELD] = grid
 
     if portfolio is not None:
         url_parts['portfolio'] = portfolio
     if not url_parts.get('portfolio'):
         raise ValueError("A portfolio ID must be provided either in the url or as a parameter.")
 
-    base_url_parts = [url_parts.get('environment')] if url_parts.get('environment') else [] + [url_parts.get('domain')]
-    base_url = '.'.join(url_parts['environment']) if url_parts.get('environment') else base_url_parts[0]
-    if url_parts.get('mode'):
-        base_url = f"{url_parts['mode']}-{base_url}"
-    api_url = f"https://{base_url}/lightstation/api/reports/query/layout/{url_parts['grid']}/v{api_version or CURRENT_API_VERSION}?focus={url_parts['portfolio']}"
+    base_url_parts = [url_parts.get(ENVIRONMENT_FIELD)] if url_parts.get(ENVIRONMENT_FIELD) else [] + [url_parts.get(DOMAIN_FIELD)]
+    base_url = '.'.join(url_parts[ENVIRONMENT_FIELD]) if url_parts.get(ENVIRONMENT_FIELD) else base_url_parts[0]
+    if url_parts.get(MODE_FIELD):
+        base_url = f"{url_parts[MODE_FIELD]}-{base_url}"
+    api_url = f"https://{base_url}/lightstation/api/reports/query/layout/{url_parts[GRID_FIELD]}/v{api_version or CURRENT_API_VERSION}?focus={url_parts['portfolio']}"
 
     if begin_date is not None:
-        api_url += f"&bd={begin_date}"
+        api_url += f"&{BEGIN_DATE_FIELD}={begin_date}"
     if end_date is not None:
-        api_url += f"&ed={end_date}"
+        api_url += f"&{END_DATE_FIELD}={end_date}"
     if rollup is not None:
-        api_url += f"&rollup={rollup}"
+        api_url += f"&{ROLLUP_FIELD}={rollup}"
 
     return api_url
 
