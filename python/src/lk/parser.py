@@ -18,12 +18,148 @@ import requests
 import numpy as np
 import pandas as pd
 
-PAYLOAD_FIELD = 'Payload'
-RESPONSEID_FIELD = 'ResponseId'
-TIMESTAMP_FIELD = 'Timestamp'
-REQUEST_DETAILS_FIELD = 'RequestDetails'
-PORTFOLIO_DETAILS_FIELD = 'PortfolioDetails'
+from . import credential as lkcred
 
+# --- URL Fields ---
+DOMAIN_FIELD = 'domain'                          # holds the domain name for the server
+ENVIRONMENT_FIELD = 'environment'                # holds the environment name for the server
+MODE_FIELD = 'mode'                              # holds the mode name for the server (e.g. dev, test, prod)
+GRID_FIELD = 'grid'                              # holds the data grid name to request
+API_VERSION_FIELD = 'apiVersion'                 # holds the API version to request
+PORTFOLIO_FIELD = 'portfolio'                    # holds the portfolio ID to request
+ROLLUP_FIELD = 'rollup'                          # holds the rollup/granularity to request
+BEGIN_DATE_FIELD = 'bd'                          # holds the beginning date for the request
+END_DATE_FIELD = 'ed'                            # holds the end date for the request
+DATE_SNAP_FIELD = 'dateSnap'                     # holds the date snap for the request
+
+# --- Response Fields ---
+PAYLOAD_FIELD = 'Payload'                        # holds the main data payload
+RESPONSE_ID_FIELD = 'ResponseId'                 # API response identifier used for debugging
+TIMESTAMP_FIELD = 'Timestamp'                    # Timestamp the request was made
+REQUEST_DETAILS_FIELD = 'RequestDetails'         # Holds additional request metadata
+PORTFOLIO_DETAILS_FIELD = 'PortfolioDetails'     # Holds portfolio metadata
+
+CURRENT_API_VERSION = 2  # The current version of the API we are using
+
+#---------------
+# URL Tools
+#---------------
+def parse_api_url(url: str) -> typing.Dict[str, typing.Union[str,int]]:
+    """
+    Parses the data grid API url for a server into a dictionary of parameters.
+    Args:
+        url: The url string to parse which was copied from the LK UI.
+    Returns: A dictionary of parameters parsed from the url.
+    """
+    if url is None:
+        raise ValueError("A url must be provided.")
+
+    # Example URL:
+    # https://environment.domain/lightstation/api/reports/query/layout/<template>/v2?focus=portfolio&rollup=rollup&bd=YYYY-MM-DD&ed=YYYY-MM-DD
+
+    parsed_url = {}
+    try:
+        base, query = url.split('?', 1)
+        parts = base.split('/')
+        if len(parts) >= 1 and parts[-1].startswith('v'):
+            parsed_url['api_version'] = int(parts[-1][1:])
+        if len(parts) >= 2:
+            parsed_url['grid'] = parts[-2]
+        if len(parts) >= 1:
+            full_host = base.split('//')[1].split('/')[0]
+            full_host_parts = full_host.split('.')
+            if len(full_host_parts) > 1:
+                parsed_url['domain'] = ".".join(full_host_parts[-2:])
+            parsed_url['environment'] = ".".join(full_host_parts[:-2])
+        if parsed_url.get('environment') and '-' in parsed_url['environment']:
+            environment_parts = parsed_url['environment'].split('-')
+            parsed_url['mode'] = "-".join(environment_parts[:-1])
+            parsed_url['environment'] = environment_parts[-1]
+        query_params = query.split('&')
+        for param in query_params:
+            key_value = param.split('=')
+            # we will use the term 'portfolio' rather than 'focus' internally
+            if key_value[0] == 'focus':
+                key_value[0] = 'portfolio'
+            if len(key_value) == 2:
+                parsed_url[key_value[0]] = key_value[1]
+    except Exception as e:
+        raise ValueError(f"Failed to parse URL: {e}")
+
+    return parsed_url
+
+def build_api_url(url:typing.Optional[str]=None,
+                  grid:typing.Optional[str]=None, domain:typing.Optional[str]=None,
+                  environment:typing.Optional[str]=None, mode:typing.Optional[str]=None,
+                  begin_date:typing.Optional[typing.Any]=None, end_date:typing.Optional[typing.Any]=None,
+                  date_snap:typing.Optional[str]=None,
+                  portfolio:typing.Optional[str]=None, rollup:typing.Optional[str]=None,
+                  credential_manager:typing.Optional[lkcred.CredentialManager]=None,
+                  api_version:typing.Optional[int]=None) -> str:
+    """
+    Builds the data grid API url to a server returning a string url.
+    Args:
+        url: The url string to query which was copied from the LK UI.  If provided it will be used as the base data set for
+        all other parameters.
+        grid: The grid name to request.  If not provided, the url must be provided.
+        domain: The domain name to use for the request.  If not provided, the default credential manager domain will be used.
+        environment: The environment name to use for the request.  If not provided, the default credential manager environment will be used.
+        mode: The mode name to use for the request.  If not provided, no mode will be used.
+        begin_date: The beginning date for the request in YYYY-MM-DD format.
+        end_date: The end date for the request in YYYY-MM-DD format.
+        date_snap: The date snap to use for the request.  If provided, begin_date and end_date will be ignored.
+        portfolio: The portfolio ID to use for the request.  If not provided, the default portfolio for the user will be used.
+        rollup: The rollup/granularity to use for the request.  If not provided, the default rollup for the view will be used.
+        credential_manager: The credential manager to use to securely retrieve credentials. If provided, it will override
+                            any url, domain, or environment parameters.
+        api_version: The API version to use for the request.  If not provided, the default API version will be used.
+    Returns: A string url built from the component parts.
+    """
+    if url is not None:
+        url_parts = parse_api_url(url)
+    else:
+        url_parts = {}
+
+    if grid is None and not url_parts:
+        raise ValueError("Either a url or grid name must be provided.")
+
+    if credential_manager is None:
+        credential_kwargs = url_parts.copy()
+        credential_kwargs['domain'] = domain
+        credential_kwargs['environment'] = environment
+        credential_manager = lkcred.get_credential_manager_from_kwargs(**credential_kwargs)
+        url_parts['domain'] = credential_manager.domain
+        url_parts['environment'] = credential_manager.environment
+
+    if mode is not None:
+        url_parts['mode'] = mode
+
+    if grid is not None:
+        url_parts['grid'] = grid
+
+    if portfolio is not None:
+        url_parts['portfolio'] = portfolio
+    if not url_parts.get('portfolio'):
+        raise ValueError("A portfolio ID must be provided either in the url or as a parameter.")
+
+    base_url_parts = [url_parts.get('environment')] if url_parts.get('environment') else [] + [url_parts.get('domain')]
+    base_url = '.'.join(url_parts['environment']) if url_parts.get('environment') else base_url_parts[0]
+    if url_parts.get('mode'):
+        base_url = f"{url_parts['mode']}-{base_url}"
+    api_url = f"https://{base_url}/lightstation/api/reports/query/layout/{url_parts['grid']}/v{api_version or CURRENT_API_VERSION}?focus={url_parts['portfolio']}"
+
+    if begin_date is not None:
+        api_url += f"&bd={begin_date}"
+    if end_date is not None:
+        api_url += f"&ed={end_date}"
+    if rollup is not None:
+        api_url += f"&rollup={rollup}"
+
+    return api_url
+
+#---------------
+# Responses
+#---------------
 def lk_api_response_to_frames(response:typing.Union[str, typing.List[typing.Dict[str, typing.Any]], requests.Response]) -> typing.Optional[typing.Dict[str, pd.DataFrame]]:
     """
     Parses an API json response string to a dictionary of pandas frames.
@@ -78,8 +214,8 @@ def lk_api_data_to_frames(data:typing.List[typing.Dict[str, typing.Any]]) -> typ
             parsed_data['request'] = data[REQUEST_DETAILS_FIELD]
             if TIMESTAMP_FIELD in data:
                 parsed_data['request'][TIMESTAMP_FIELD] = data[TIMESTAMP_FIELD]
-            if RESPONSEID_FIELD in data:
-                parsed_data['request'][RESPONSEID_FIELD] = data[RESPONSEID_FIELD]
+            if RESPONSE_ID_FIELD in data:
+                parsed_data['request'][RESPONSE_ID_FIELD] = data[RESPONSE_ID_FIELD]
         if PORTFOLIO_DETAILS_FIELD in data:
             parsed_data['portfolio'] = data[PORTFOLIO_DETAILS_FIELD]
         return parsed_data
@@ -172,9 +308,7 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
 
     return frame_data
 
-#---------------
-# Version 1.0
-#---------------
+# ---- Version 1.0
 def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFrame:
     """
     Converts an inner Lightkeeper layout data dictionary to simplified frame object for later processing.  This function
@@ -222,9 +356,7 @@ def lk_layout_data_to_frame_v1(data: typing.Dict[str, typing.Any]) -> pd.DataFra
 
     return data_frame
 
-#---------------
-# Version 2.0
-#---------------
+# ---- Version 2.0
 def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers) -> pd.DataFrame:
     """
 
@@ -319,7 +451,7 @@ def extract_group_data(data, group_headers=None, group_path=None):
     return dfs
 
 #---------------
-# Tools
+# Frame Tools
 #---------------
 def clean_frame(df:pd.DataFrame) -> pd.DataFrame:
     """
@@ -336,7 +468,7 @@ def clean_frame(df:pd.DataFrame) -> pd.DataFrame:
 
     # clean up percentage columns
     pct_columns = [column for column, dtype in list(df.dtypes.to_dict().items())
-                   if dtype.kind == 'f' and column.endswith(' %')]
+                   if dtype.kind in {'i', 'f'} and column.endswith(' %')]
     if pct_columns:
         df = df.assign(**{col: df[col] / 100.0 for col in pct_columns})
 
