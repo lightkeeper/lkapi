@@ -34,7 +34,8 @@ Prior to using the API, you will need to get a `client_id`, and `client_secret` 
 In a longer term development or production environment, you can set the environment variables or in secure credential storage if the [keyring](https://pypi.org/project/keyring/) python module is installed.
 
 ```python
-import lk.credential as lkcredential
+import lkapi.credential as lkcredential
+
 # get a long-lived credential manager which will store to the keyring if available or environment variables otherwise
 credential_manager = lkcredential.get_credential_manager(url="https://YOUR-LIGHTKEEPER-ENVIRONMENT.COM")
 credential_manager.set_secret('CLIENT_ID_XXXXXX', 'CLIENT_SECRET_XXXX')
@@ -44,9 +45,11 @@ The credential manager provides a base class that can be extended to provide cus
 The python client can be imported and run with stored credentials or by directly passing credentials.
 
 ```python
-import lk.api as lkapi
+import lkapi.client as lkapi
 
-lkapi.make_api_request(url="https://YOUR-LIGHTKEEPER-ENVIRONMENT.COM/lightstation/api/reports/query/layout/Portfolio_Grid__user@lightkeeper.com/v1?bd=YYYYMMDD&ed=YYYYMMDD&focus=PORT&rollup=ROLLUP", username="CLIENT_ID_XXXXXX", password="CLIENT_SECRET_XXXXXXX")
+lkapi.get_grid_data(
+    url="https://YOUR-LIGHTKEEPER-ENVIRONMENT.COM/lightstation/api/reports/query/layout/Portfolio_Grid__user@lightkeeper.com/v1?bd=YYYYMMDD&ed=YYYYMMDD&focus=PORT&rollup=ROLLUP",
+    username="CLIENT_ID_XXXXXX", password="CLIENT_SECRET_XXXXXXX")
 ```
 
 The return format defaults to a dictionary of information. If you would like to work with the raw response object you can set the argument `debug=True` in the `make_api_request` call.

@@ -4,7 +4,7 @@ import json
 import pytest
 from unittest.mock import patch, MagicMock
 
-from lk.credential import (
+from lkapi.credential import (
     CredentialManager,
     ManualCredentialManager,
     EnvironmentCredentialManager,
@@ -114,7 +114,7 @@ class TestEnvironmentCredentialManager:
 
 
 class TestKeyringCredentialManager:
-    @patch('lk.credential.keyring', create=True)
+    @patch('lkapi.credential.keyring', create=True)
     def test_set_secret(self, mock_keyring, cred_data):
         """Test setting a secret using mocked keyring."""
         cm = KeyringCredentialManager()
@@ -124,7 +124,7 @@ class TestKeyringCredentialManager:
             cm.env_key, cm.env_key, dump_cred_data
         )
 
-    @patch('lk.credential.keyring', create=True)
+    @patch('lkapi.credential.keyring', create=True)
     def test_get_secret(self, mock_keyring, cred_data):
         """Test getting a secret using mocked keyring."""
         cred_json = json.dumps(cred_data)

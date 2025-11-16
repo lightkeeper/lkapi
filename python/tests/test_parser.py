@@ -6,9 +6,9 @@ import requests
 from unittest.mock import Mock, MagicMock
 from pandas.testing import assert_frame_equal
 
-from lk import credential
+from lkapi import credential
 
-from lk.parser import (
+from lkapi.parser import (
     parse_api_url,
     build_api_url,
     lk_api_response_to_frames,

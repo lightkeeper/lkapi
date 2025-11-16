@@ -29,10 +29,10 @@ from . import parser as lkparser
 #---------------
 # Basic Request
 #---------------
-def make_api_request(url:typing.Optional[str]=None, grid:typing.Optional[str]=None,
-                     environment:typing.Optional[str]=None,
-                     credential_manager:typing.Optional[typing.Union[str, lkcred.CredentialManager]]=None,
-                     debug=False, **kwargs):
+def get_grid_data(url:typing.Optional[str]=None, grid:typing.Optional[str]=None,
+                  environment:typing.Optional[str]=None,
+                  credential_manager:typing.Optional[typing.Union[str, lkcred.CredentialManager]]=None,
+                  debug=False, **kwargs):
     """
     Makes a data grid API request to a server returning a dictionary of frames for the data.
     Args:
