@@ -281,7 +281,7 @@ def test_extract_group_data(mock_v2_layout_element):
 # --- Test Frame Tools ---
 def test_clean_frame():
     """Test cleaning of a DataFrame."""
-    data = {'A': [1], 'B': [100.0], 'B': [100.0], 'C %': [500], 'Date': ['2023-01-01']}
+    data = {'A': [1], 'B': [100.0], 'C %': [500], 'Date': ['2023-01-01']}
     df = pd.DataFrame(data)
     cleaned_df = clean_frame(df)
     assert list(cleaned_df.columns) == ['A', 'B', 'C %', 'Date']

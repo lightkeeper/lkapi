@@ -2,7 +2,7 @@
 import os
 import json
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from lkapi.credential import (
     CredentialManager,
@@ -11,7 +11,6 @@ from lkapi.credential import (
     KeyringCredentialManager,
     get_credential_manager,
     get_credential_manager_from_kwargs,
-    get_auth_token
 )
 
 
