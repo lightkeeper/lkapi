@@ -11,6 +11,12 @@ To access the Lightkeeper API, regardless of programming language, you will need
 
 The python directory includes a supported API client that intereacts with API data via pandas data frames. If you would like to build your own client in a different language `lkapi.yaml` provides an [OpenApi](https://www.openapis.org/) specification. Do note that the OAuth2 workflow does not naturally embed in OpenAPI client so extra coding work around retrieving the bearer token will need to be implemented in the native client language.
 
+Example build instructions for a csharp OpenAPI client using a npm tool chain:
+```bash
+npm install @openapitools/openapi-generator-cli -g
+npm run lkapi_csharp_build
+```
+
 ## Contributing
 
 If you have any suggestions or requests regarding examples, features or additional languages for clients.  Please submit an issue to this repository or reach out to [Lightkeeper support](lightkeeper.com).
