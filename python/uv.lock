@@ -474,7 +474,6 @@ source = { editable = "." }
 dependencies = [
     { name = "numpy" },
     { name = "pandas" },
-    { name = "pytest-sugar" },
     { name = "requests" },
 ]
 
@@ -484,13 +483,13 @@ dev = [
     { name = "keyring" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pytest-sugar" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "numpy", specifier = ">=2.2.3" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pytest-sugar", specifier = ">=1.1.1" },
     { name = "requests", specifier = ">=2.32.3" },
 ]
 
@@ -500,6 +499,7 @@ dev = [
     { name = "keyring", specifier = ">=25.6.0" },
     { name = "pytest", specifier = ">=9.0.1" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "pytest-sugar", specifier = ">=1.1.1" },
 ]
 
 [[package]]
