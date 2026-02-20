@@ -58,7 +58,6 @@ def lk_api_data_to_frames(data:typing.List[typing.Dict[str, typing.Any]]) -> typ
         data: A json like dictionary
     Returns: A dictionary of frames or None if the request fails.
     """
-
     # we are assuming layout json but if we could have different types in addition to different versions switch here
     data_type = 'layout'
     if data_type == 'layout':
@@ -87,7 +86,6 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
     Returns: A dictionary of pandas frames.
     """
     frame_data = {}
-
     data_version = data['version']
 
     if data_version == 1:
@@ -205,7 +203,11 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
     # data_type = data['type']
     # data_depth = data['depth']
     # data_headers = data['headers']
-    is_grouped = "groups" in data.keys()
+    is_grouped = "groups" in data
+    has_data = "data" in data
+    if not is_grouped and not has_data:
+        # Stub block (e.g. time when viewby=rollup): only metadata present, no data to frame.
+        return None
 
     if data_type == 'Net' and data_headers[0] == 'Total':
         # drop the total since it isn't helpful
