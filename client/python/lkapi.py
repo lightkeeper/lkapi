@@ -262,7 +262,7 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
     else:
         if data_type == 'time':
             data_headers[0] = 'Date'
-        data_frame = pd.DataFrame([r for r in data['data']], columns=data_headers)
+        data_frame = pd.DataFrame([r for r in data.get('data', [])], columns=data_headers)
 
     return data_frame
 
@@ -307,22 +307,8 @@ def payload_to_frame(responseResult):
     Returns:
         payload results from the api response as a frame
     """
-    version = responseResult['Payload'][0]['version']
-
-    if version == 'v1':
-        try:
-            payload = responseResult['Payload']
-            payload_frame = lk_api_data_to_frames(payload)
-            return payload_frame
-        except:
-            print("No payload data returned")
-    else:
-        try:
-            payload = responseResult['Payload']
-            payload_frame = lk_api_data_to_frames(payload)
-            return payload_frame
-        except:
-            print("No payload data returned")
+    payload = responseResult['Payload']
+    return lk_api_data_to_frames(payload)
 
 #---------------
 # Basic Client
@@ -392,12 +378,18 @@ def make_api_request(url:str, username:str, password:str,):
     response = requests.get(url, headers=api_headers)
 
     # Tokens are valid for one hour ... check for a 401 Token Expired if they time out
-    if response.status_code == 401 and response.json()['detail'] == "Token Expired":
-        print("Token expired. Refreshing token...")
-        token = get_auth_token(environment=environment, username=username, password=password)
-        api_headers["Authorization"] = token
-        response = requests.get(url, headers=api_headers)
+    if response.status_code == 401:
+        try:
+            detail = response.json().get('detail', '')
+        except Exception:
+            detail = ''
+        if detail == "Token Expired":
+            print("Token expired. Refreshing token...")
+            token = get_auth_token(environment=environment, hostname=hostname, username=username, password=password)
+            api_headers["Authorization"] = token
+            response = requests.get(url, headers=api_headers)
 
+    response.raise_for_status()
     return response.json()
 
 if __name__ == "__main__":
