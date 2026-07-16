@@ -1,9 +1,7 @@
 
 #! /usr/bin/env python
 # Copyright (c) 2025 LightKeeper LLC
-# ANY REDISTRIBUTION OR COPYING OF THIS MATERIAL WITHOUT THE EXPRESS CONSENT
-# OF LIGHTKEEPER IS PROHIBITED.
-# All rights reserved.
+# Distributed under the MIT License (see LICENSE).
 #
 """
 Methods for processing Web API JSON data objects into pandas data frames.  The data returned from the
