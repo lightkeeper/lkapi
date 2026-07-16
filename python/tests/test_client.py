@@ -41,6 +41,26 @@ def test_make_api_request_http_error(mock_build_url, mock_get_token, mock_reques
     with pytest.raises(ValueError, match="API request failed with status code 500: Internal Server Error"):
         client.get_grid_data(url=BASE_URL, username="CLIENT_ID_XXXXXX", password="CLIENT_SECRET_XXXXXXX")
 
+@patch('lkapi.client.requests.get')
+@patch('lkapi.client.lkcred.get_auth_token')
+@patch('lkapi.client.lkparser.build_api_url')
+def test_make_api_request_401_non_json_body(mock_build_url, mock_get_token, mock_requests_get):
+    """Test that a 401 with a non-JSON body raises ValueError instead of crashing on parse."""
+    mock_build_url.return_value = MOCK_BUILT_URL
+    mock_get_token.return_value = "test_token"
+    mock_response = MagicMock()
+    mock_response.status_code = 401
+    mock_response.text = "Unauthorized"
+    mock_response.json.side_effect = ValueError("No JSON could be decoded")
+    mock_requests_get.return_value = mock_response
+
+    with pytest.raises(ValueError, match="API request failed with status code 401"):
+        client.get_grid_data(url=BASE_URL, username="CLIENT_ID_XXXXXX", password="CLIENT_SECRET_XXXXXXX")
+
+    # no refresh should be attempted when the 401 body is not a Token Expired detail
+    assert mock_get_token.call_count == 1
+
+
 @patch('lkapi.client.lkparser.lk_api_response_to_frames')
 @patch('lkapi.client.requests.get')
 @patch('lkapi.client.lkcred.get_auth_token')

@@ -58,10 +58,15 @@ def get_grid_data(url:typing.Optional[str]=None, grid:typing.Optional[str]=None,
     response = requests.get(used_url, headers=api_headers)
 
     # Tokens are valid for one hour ... check for a 401 Token Expired if they time out
-    if response.status_code == 401 and response.json()['detail'] == "Token Expired":
-        token = lkcred.get_auth_token(url=used_url, environment=environment, credential_manager=credential_manager, **kwargs)
-        api_headers = {"Authorization": token}
-        response = requests.get(used_url, headers=api_headers)
+    if response.status_code == 401:
+        try:
+            detail = response.json().get('detail', '')
+        except Exception:
+            detail = ''
+        if detail == "Token Expired":
+            token = lkcred.get_auth_token(url=used_url, environment=environment, credential_manager=credential_manager, **kwargs)
+            api_headers = {"Authorization": token}
+            response = requests.get(used_url, headers=api_headers)
 
     if debug:
         return response

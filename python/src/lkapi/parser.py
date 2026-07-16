@@ -329,7 +329,8 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
             else:
                 data_frame = pd.DataFrame([data], columns=data_headers[1:])
         else:
-            data_frame = pd.DataFrame([r for r in data['data']], columns=data_headers)
+            # blocks excluded by a viewby selection are metadata-only stubs without a data key
+            data_frame = pd.DataFrame([r for r in data.get('data', [])], columns=data_headers)
 
     return clean_frame(data_frame)
 

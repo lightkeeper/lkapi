@@ -269,6 +269,22 @@ def test_lk_layout_data_to_frame_v2_non_grouped():
     assert_frame_equal(df, pd.DataFrame([['T1', 100], ['T2', 200]], columns=headers))
 
 
+def test_lk_layout_data_to_frame_v2_stub_block():
+    """Test v2 stub blocks (e.g. time when viewby=rollup) frame as empty instead of raising."""
+    stub = {'name': 'time', 'totals': [370, 3.5]}
+    df = lk_layout_data_to_frame_v2(stub, 'time', ['Ticker', 'Value'])
+    assert df.empty
+
+
+def test_lk_layout_element_to_frames_viewby_rollup(mock_v2_layout_element):
+    """Test a v2 element where viewby=rollup leaves the time block as a metadata-only stub."""
+    mock_v2_layout_element['time'] = {'name': 'time', 'totals': [370, 3.5]}
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    assert 'rollup' in result
+    assert len(result['rollup']) == 3
+    assert result['time'].empty
+
+
 def test_extract_group_data(mock_v2_layout_element):
     """Test recursive extraction of grouped data."""
     dfs = extract_group_data(mock_v2_layout_element['rollup'], group_headers=['Sector'])
