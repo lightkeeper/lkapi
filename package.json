@@ -1,8 +1,0 @@
-{
-    "name": "lkapi_openapi_clients",
-    "version": "0.1.0",
-    "scripts": {
-        "lkapi_csharp_build": "openapi-generator-cli generate -i openapi/lkapi.yaml -g csharp -o csharp --additional-properties=apiName=LKApi",
-        "lkapi_javascript_build": "openapi-generator-cli generate -i openapi/lkapi.yaml -g javascript -o javascript --additional-properties=apiPackage=lkapi"
-    }
-}

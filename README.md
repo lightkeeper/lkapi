@@ -52,11 +52,13 @@ The response is JSON with a `Payload` of rollup, time, and total blocks plus req
 
 [`openapi/lkapi.yaml`](openapi/lkapi.yaml) provides an [OpenAPI](https://www.openapis.org/) specification for building clients in other languages. Note that the OAuth2 token exchange above is not embedded in the generated clients, so bearer token retrieval needs to be implemented in the native client language.
 
-Example build instructions for a csharp OpenAPI client using an npm tool chain:
+Example build instructions for a csharp OpenAPI client using the [openapi-generator](https://openapi-generator.tech/) CLI:
 ```bash
 npm install @openapitools/openapi-generator-cli -g
-npm run lkapi_csharp_build
+openapi-generator-cli generate -i openapi/lkapi.yaml -g csharp -o csharp --additional-properties=apiName=LKApi
 ```
+
+Swap `-g csharp` (and the output/properties) for another [supported generator](https://openapi-generator.tech/docs/generators), e.g. `-g javascript -o javascript --additional-properties=apiPackage=lkapi`.
 
 ## Contributing
 
