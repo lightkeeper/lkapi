@@ -1,0 +1,35 @@
+[project]
+name = "lkapi"
+version = "0.2.0"
+description = "Python client code to work with the Lightkeeper API"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.2.3",
+    "pandas>=2.2.3",
+    "requests>=2.32.3",
+]
+
+[dependency-groups]
+dev = [
+    "ipython>=8.37.0",
+    "keyring>=25.6.0",
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
+    "pytest-sugar>=1.1.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.12,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
