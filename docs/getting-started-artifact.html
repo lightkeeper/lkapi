@@ -1,0 +1,620 @@
+<title>Getting started with lkapi</title>
+<style>
+  :root {
+    --bg: #f6f7f5;
+    --ink: #14181c;
+    --ink-soft: #4b5560;
+    --ink-faint: #7c8790;
+    --accent: #1e5f55;
+    --accent-soft: #e4eeeb;
+    --accent-line: #bcd6cd;
+    --line: #d8dde0;
+    --warn: #96501f;
+    --warn-soft: #f3e6d8;
+    --code-bg: #171c1f;
+    --code-fg: #e7eae6;
+    --code-comment: #8a9a94;
+    --code-string: #9fd8c4;
+    --code-key: #e4b473;
+    --shadow: 0 1px 2px rgba(20, 24, 28, 0.06), 0 8px 24px rgba(20, 24, 28, 0.05);
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12171a;
+    --ink: #ecefeb;
+    --ink-soft: #a9b2b8;
+    --ink-faint: #7d878d;
+    --accent: #4fbfac;
+    --accent-soft: rgba(79, 191, 172, 0.1);
+    --accent-line: rgba(79, 191, 172, 0.28);
+    --line: #2a3236;
+    --warn: #d98a4c;
+    --warn-soft: rgba(217, 138, 76, 0.12);
+    --code-bg: #0b0e10;
+    --code-fg: #dce3de;
+    --code-comment: #6d7d77;
+    --code-string: #8fd0ba;
+    --code-key: #e6bd82;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12171a;
+      --ink: #ecefeb;
+      --ink-soft: #a9b2b8;
+      --ink-faint: #7d878d;
+      --accent: #4fbfac;
+      --accent-soft: rgba(79, 191, 172, 0.1);
+      --accent-line: rgba(79, 191, 172, 0.28);
+      --line: #2a3236;
+      --warn: #d98a4c;
+      --warn-soft: rgba(217, 138, 76, 0.12);
+      --code-bg: #0b0e10;
+      --code-fg: #dce3de;
+      --code-comment: #6d7d77;
+      --code-string: #8fd0ba;
+      --code-key: #e6bd82;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 28px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 64px 24px 96px;
+  }
+
+  @media (max-width: 560px) {
+    .page { padding: 40px 18px 72px; }
+  }
+
+  h1, h2, h3 {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    font-weight: 400;
+    color: var(--ink);
+    text-wrap: balance;
+    letter-spacing: 0.1px;
+  }
+
+  .eyebrow {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 1.6rem + 1.6vw, 2.6rem);
+    line-height: 1.15;
+    margin: 0 0 16px;
+  }
+
+  .dek {
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 20px;
+  }
+
+  .dek-note {
+    font-size: 0.94rem;
+    color: var(--ink-faint);
+    max-width: 62ch;
+    margin: 0 0 32px;
+    padding-left: 14px;
+    border-left: 2px solid var(--accent-line);
+  }
+
+  header.hero {
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 48px;
+  }
+
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .toc a {
+    display: inline-block;
+    font-size: 0.86rem;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 6px 14px;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+
+  .toc a:hover, .toc a:focus-visible {
+    color: var(--accent);
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+    outline: none;
+  }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 0 0 44px;
+  }
+
+  .callout .label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+
+  .callout ol, .callout ul { margin: 0; padding-left: 1.2em; }
+  .callout li + li { margin-top: 8px; }
+  .callout p:last-child { margin-bottom: 0; }
+
+  .callout-warn {
+    background: var(--warn-soft);
+    border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 14px 0 18px;
+  }
+
+  .callout-warn .label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--warn);
+    margin: 0 0 6px;
+  }
+
+  .callout-warn p { margin: 0; }
+  .callout-warn p code { background: rgba(150, 80, 31, 0.12); color: var(--warn); }
+
+  section.step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 0 22px;
+    padding-top: 40px;
+    margin-top: 40px;
+    border-top: 1px solid var(--line);
+  }
+
+  section.step:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+
+  .step-num {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+    font-size: 1.7rem;
+    color: var(--accent);
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  section.step h2 {
+    grid-column: 2;
+    font-size: 1.5rem;
+    margin: 0 0 6px;
+    scroll-margin-top: 24px;
+  }
+
+  section.step .step-body { grid-column: 2; }
+
+  @media (max-width: 560px) {
+    section.step { grid-template-columns: 1fr; }
+    .step-num { display: none; }
+  }
+
+  p { margin: 0 0 16px; }
+  .step-body > *:last-child { margin-bottom: 0; }
+
+  .platform {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 0 0 18px;
+  }
+
+  .platform h3 {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 12px;
+  }
+
+  .platform ol { margin: 0; padding-left: 1.2em; }
+  .platform li + li { margin-top: 8px; }
+
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 10px;
+    padding: 18px 20px;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+    margin: 0 0 18px;
+  }
+
+  code {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, Menlo, monospace;
+    font-size: 0.88rem;
+  }
+
+  p code, li code, td code {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 0.12em 0.4em;
+    border-radius: 5px;
+    font-size: 0.86em;
+  }
+
+  pre code { background: none; color: inherit; padding: 0; border-radius: 0; }
+
+  .cm { color: var(--code-comment); }
+  .st { color: var(--code-string); }
+  .kw { color: var(--code-key); }
+
+  .table-wrap { overflow-x: auto; margin: 0 0 18px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  th {
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 0.76rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+
+  td:first-child { font-family: ui-monospace, "SF Mono", Consolas, Menlo, monospace; font-size: 0.84rem; color: var(--warn); white-space: nowrap; }
+
+  .frame-keys { list-style: none; margin: 0 0 18px; padding: 0; }
+  .frame-keys li {
+    display: grid;
+    grid-template-columns: 128px 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .frame-keys li:last-child { border-bottom: none; }
+  .frame-keys code { white-space: nowrap; }
+
+  .optional-tag {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 2px 10px;
+    margin-left: 10px;
+    vertical-align: middle;
+  }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+  }
+
+  a { color: var(--accent); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .page { animation: rise 0.5s ease-out; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  }
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <p class="eyebrow">lkapi &middot; getting started</p>
+    <h1>Getting started with lkapi</h1>
+    <p class="dek">A step-by-step guide for pulling your Lightkeeper portfolio data using the LK API repository.</p>
+    <p class="dek-note">This guide, and the <code>lkapi</code> package itself, are Python-specific, but the underlying Lightkeeper Web API isn't tied to any one language. It works the same way from Python, R, C#, JavaScript, or anything else that can make an HTTPS request. If your team works in a different language, see <a href="#other-languages">Prefer a different language?</a> near the end.</p>
+    <ul class="toc">
+      <li><a href="#before">Before you start</a></li>
+      <li><a href="#step-1">1. Install Python</a></li>
+      <li><a href="#step-2">2. Install lkapi</a></li>
+      <li><a href="#step-3">3. Launch Jupyter</a></li>
+      <li><a href="#step-4">4. Get your grid URL</a></li>
+      <li><a href="#step-5">5. First request</a></li>
+      <li><a href="#step-6">6. Troubleshooting</a></li>
+      <li><a href="#step-7">7. Stored credentials</a></li>
+      <li><a href="#other-languages">8. Other languages</a></li>
+    </ul>
+  </header>
+
+  <div id="before" class="callout">
+    <p class="label">Before you start</p>
+    <ol>
+      <li><strong>A <code>client_id</code> and <code>client_secret</code>.</strong> These are like a username and password for the API. There's no self-service way to get these. Reach out to your Lightkeeper contact or <a href="https://lightkeeper.com/">Lightkeeper support</a> and ask for API access.</li>
+      <li><strong>The web address (URL) of the data grid you want.</strong> You'll copy this from the Lightkeeper UI in Step 4. You don't need it yet.</li>
+    </ol>
+  </div>
+
+  <section class="step" id="step-1">
+    <span class="step-num">1</span>
+    <h2>Install Python</h2>
+    <div class="step-body">
+      <p>You need Python version 3.10 or newer.</p>
+
+      <div class="platform">
+        <h3>Windows</h3>
+        <ol>
+          <li>Go to <a href="https://www.python.org/downloads/">python.org/downloads</a> and download the latest installer.</li>
+          <li>Run it. On the very first screen, <strong>check the box that says &ldquo;Add python.exe to PATH&rdquo;</strong> before clicking Install. This step is easy to miss and causes problems later if skipped.</li>
+          <li>Open the <strong>Command Prompt</strong> (search for it in the Start menu) and type:</li>
+        </ol>
+        <pre><code>python --version</code></pre>
+        <p>You should see something like <code>Python 3.12.4</code>. If you see an error instead, close and reopen Command Prompt and try again.</p>
+      </div>
+
+      <div class="platform">
+        <h3>Mac</h3>
+        <ol>
+          <li>Go to <a href="https://www.python.org/downloads/">python.org/downloads</a> and download the latest macOS installer.</li>
+          <li>Run it and follow the prompts.</li>
+          <li>Open the <strong>Terminal</strong> app (search with Spotlight, Cmd+Space) and type:</li>
+        </ol>
+        <pre><code>python3 --version</code></pre>
+        <p>You should see something like <code>Python 3.12.4</code>.</p>
+      </div>
+
+      <p><em>On Mac, use <code>python3</code> and <code>pip3</code> everywhere this guide says <code>python</code>/<code>pip</code>.</em></p>
+    </div>
+  </section>
+
+  <section class="step" id="step-2">
+    <span class="step-num">2</span>
+    <h2>Install lkapi and Jupyter</h2>
+    <div class="step-body">
+      <p>In the same Command Prompt / Terminal window, type:</p>
+      <pre><code><span class="cm"># installs lkapi and Jupyter Notebook</span>
+pip install lkapi jupyter</code></pre>
+      <p>This installs two things:</p>
+      <ul>
+        <li><strong>lkapi</strong>: the tool that talks to Lightkeeper.</li>
+        <li><strong>Jupyter Notebook</strong>: the tool you'll use to actually run your code (explained below).</li>
+      </ul>
+    </div>
+  </section>
+
+  <div id="what-is-jupyter" class="callout">
+    <p class="label">What is Jupyter Notebook?</p>
+    <p>Jupyter Notebook is a free, widely-used tool that opens as a page in your web browser. Instead of writing one big program, you write small pieces of Python code in boxes called <strong>cells</strong> and run them one at a time. Each cell's result (a number, a table, a chart) appears right underneath it. It's a bit like a spreadsheet where each formula shows its own answer immediately below, rather than in a separate cell. This makes it a popular way for people without a software engineering background to explore data with Python.</p>
+    <p><strong>Jupyter is just one way to run this code, not the only one.</strong> This guide uses it because it's the easiest starting point if you've never run Python before, but <code>lkapi</code> is a normal Python package, so anyone on your team who already codes can use whatever tool they're comfortable with instead:</p>
+    <ul>
+      <li><strong>A terminal</strong>: save the same code in a plain text file ending in <code>.py</code> (e.g. <code>my_query.py</code>) and run it with <code>python my_query.py</code>. You won't see each step's output automatically like in a notebook, so you'd add a <code>print(...)</code> line wherever you want to see a result.</li>
+      <li><strong>An IDE like <a href="https://code.visualstudio.com/">VS Code</a></strong>: a full code editor with error-checking, autocomplete, and (via its Python/Jupyter extensions) the ability to run either plain scripts or notebook-style cells directly in the editor. Common among people who write Python regularly.</li>
+    </ul>
+    <p>Everything you need for this guide is: cells, running one with <strong>Shift+Enter</strong>, and saving your work, covered in Step 3. To explore further on your own:</p>
+    <ul>
+      <li><a href="https://jupyter.org/try">Try Jupyter</a>: run a notebook in your browser with no installation, to get a feel for it.</li>
+      <li><a href="https://docs.jupyter.org/en/latest/">Jupyter Documentation</a>: the official docs, including a beginner-friendly walkthrough of the interface.</li>
+    </ul>
+  </div>
+
+  <section class="step" id="step-3">
+    <span class="step-num">3</span>
+    <h2>Launch Jupyter and open a new notebook</h2>
+    <div class="step-body">
+      <ol>
+        <li>In the same terminal window, type:
+          <pre><code>jupyter notebook</code></pre>
+        </li>
+        <li>A browser tab will open showing a file browser (the address bar will say something like <code>localhost:8888/tree</code>).</li>
+        <li>Click the <strong>New</strong> dropdown near the top right. Under the <strong>Notebook</strong> section, choose <strong>Python 3 (ipykernel)</strong>.</li>
+      </ol>
+      <div class="callout-warn">
+        <p class="label">Common mistake</p>
+        <p>Make sure you pick <strong>Notebook &gt; Python 3 (ipykernel)</strong>, not <strong>Text File</strong> or <strong>Python File</strong>. Those create a plain <code>.py</code> file that just displays your code; there's no way to run it and no output will appear. A notebook file ends in <code>.ipynb</code>, and its address bar will say <code>localhost:8888/notebooks/...</code>, not <code>localhost:8888/edit/...</code>.</p>
+      </div>
+      <p>This opens a new notebook with one empty, ready-to-use cell.</p>
+    </div>
+  </section>
+
+  <section class="step" id="step-4">
+    <span class="step-num">4</span>
+    <h2>Get your grid URL</h2>
+    <div class="step-body">
+      <ol>
+        <li>In the Lightkeeper UI, open the grid (data view) you want data from.</li>
+        <li>Go to <strong>Grid &gt; Api Routes</strong>.</li>
+        <li>Copy the URL shown there. It will look something like this:</li>
+      </ol>
+      <pre><code><span class="st">https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131</span></code></pre>
+      <p>If what you copied looks roughly like that (starts with <code>https://</code>, contains <code>lightkeeperhq.com</code>, and has a <code>focus=</code> and <code>bd=</code>/<code>ed=</code> in it), you copied the right thing.</p>
+    </div>
+  </section>
+
+  <section class="step" id="step-5">
+    <span class="step-num">5</span>
+    <h2>Your first request</h2>
+    <div class="step-body">
+      <p>Click into the first empty cell of your notebook and paste this, replacing the three placeholder values with your real URL, client ID, and client secret:</p>
+      <pre><code><span class="kw">import</span> lkapi
+
+frames = lkapi.get_grid_data(
+    url=<span class="st">"PASTE_YOUR_GRID_URL_HERE"</span>,
+    username=<span class="st">"YOUR_CLIENT_ID"</span>,
+    password=<span class="st">"YOUR_CLIENT_SECRET"</span>,
+)
+
+frames[<span class="st">'rollup'</span>]</code></pre>
+      <p>Press <strong>Shift+Enter</strong> to run the cell. After a moment, you should see a table appear below the cell. That's your portfolio data.</p>
+      <p><code>frames</code> is a dictionary containing a few different tables, depending on what you need:</p>
+      <ul class="frame-keys">
+        <li><code>frames['rollup']</code><span class="fk-desc">One row per rollup (e.g. per issuer, per sector), summarized for the whole date range you requested.</span></li>
+        <li><code>frames['time']</code><span class="fk-desc">One row per time period (e.g. per day), summarized across the portfolio.</span></li>
+        <li><code>frames['total']</code><span class="fk-desc">The overall totals.</span></li>
+        <li><code>frames['portfolio']</code><span class="fk-desc">Details about the portfolio itself (available dates, last update time).</span></li>
+        <li><code>frames['request']</code><span class="fk-desc">Details about the request you made (useful mainly for troubleshooting).</span></li>
+      </ul>
+
+      <div class="callout-warn">
+        <p class="label">Speed tip: viewby</p>
+        <p>Your grid URL can include an optional <code>viewby=rollup</code> or <code>viewby=time</code> parameter (if it's missing, <code>time</code> is used). This controls how much day-by-day detail the server computes, and for a wide date range it makes a real difference:</p>
+        <ul>
+          <li><strong>viewby=time</strong> (the default): computes the full day-by-day breakdown, so <code>frames['time']</code> has one row per period. Fine for a short range, but for a multi-year pull it can take a long time and return a lot of data.</li>
+          <li><strong>viewby=rollup</strong>: skips the day-by-day breakdown. <code>frames['rollup']</code> is unaffected, but <code>frames['time']</code> comes back with just an overall total instead of one row per date. In exchange, the request can be dramatically faster: in internal testing, a multi-year pull dropped from around 28 seconds and 31&nbsp;MB down to under a second and 50&nbsp;KB by switching to <code>viewby=rollup</code>.</li>
+        </ul>
+        <p>If you only need rollup-level numbers and not a day-by-day series, add <code>&amp;viewby=rollup</code> to your URL for a much faster response. An empty-looking <code>frames['time']</code> in that case is expected, not a bug.</p>
+      </div>
+
+      <div class="callout-warn">
+        <p class="label">Date ranges and "date snap" views</p>
+        <p>Some saved grid views have a <strong>date snap</strong>: a rule like "Year to Date" (YTD) or "Quarter to Date" (QTD) applied automatically, configured when the view was built in the Lightkeeper UI. Whether a view has a date snap changes how the <code>bd</code> (begin date) and <code>ed</code> (end date) parts of your URL behave:</p>
+        <ul>
+          <li><strong>A view saved with a date snap (e.g. "YTD")</strong>: the end date (<code>ed</code>, or <code>end_date</code> if building a request from components, see Step 7) is respected: move it to see the same snap "as of" a different day. But the begin date (<code>bd</code> / <code>begin_date</code>) is <em>not</em> respected; it's always recalculated from the snap. For a "YTD" view, the begin date is always January 1st of whatever year your end date falls in, no matter what begin date you pass.</li>
+          <li><strong>A view saved with no date snap</strong>: both the begin date and end date fully control the range, exactly as you'd expect.</li>
+        </ul>
+        <p>If you set a custom begin date and the results don't seem to reflect it, this is the most likely reason: check whether the grid was saved with a date snap.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="step-6">
+    <span class="step-num">6</span>
+    <h2>Common problems and what they mean</h2>
+    <div class="step-body">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>What you see</th><th>What it means</th><th>What to do</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PermissionError: Invalid client credentials provided.</td>
+              <td>Your client ID or client secret is wrong.</td>
+              <td>Double-check what Lightkeeper gave you; watch for extra spaces or a swapped ID/secret.</td>
+            </tr>
+            <tr>
+              <td>RuntimeError: &hellip; forwarded to the signin screen</td>
+              <td>The URL or credentials point at the wrong Lightkeeper environment.</td>
+              <td>Re-copy the URL from Step 4, making sure it's from the same environment your credentials belong to.</td>
+            </tr>
+            <tr>
+              <td>ModuleNotFoundError: No module named 'lkapi'</td>
+              <td>lkapi isn't installed in the Python that Jupyter is actually using.</td>
+              <td>Close Jupyter, run <code>pip install lkapi</code> again from the same terminal window you'll use to launch <code>jupyter notebook</code>, then relaunch.</td>
+            </tr>
+            <tr>
+              <td>frames['time'] comes back almost empty</td>
+              <td>Your URL has viewby=rollup, which intentionally skips the day-by-day breakdown to make the request much faster.</td>
+              <td>If you need the daily breakdown, change (or add) <code>viewby=time</code> to your URL. Expect it to take longer for wide date ranges.</td>
+            </tr>
+            <tr>
+              <td>Changing bd / begin_date has no effect</td>
+              <td>Your saved view has a date snap (like "YTD"), which always recalculates the begin date automatically.</td>
+              <td>This is expected for a snapped view; only the end date can move. Ask whoever built the grid whether a non-snapped version exists if you need full control over both dates.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>If you hit something not listed here, reach out to <a href="https://lightkeeper.com/">Lightkeeper support</a> with the full error message.</p>
+    </div>
+  </section>
+
+  <section class="step" id="step-7">
+    <span class="step-num">7</span>
+    <h2>Don't want to paste your secret every time?<span class="optional-tag">Optional</span></h2>
+    <div class="step-body">
+      <p>Once you're comfortable with the basics, you can store your credentials once instead of pasting them into every notebook:</p>
+      <pre><code><span class="kw">import</span> lkapi
+
+<span class="cm"># a long-lived credential manager which stores to the keyring if available or environment variables otherwise</span>
+credential_manager = lkapi.get_credential_manager(url=<span class="st">"https://YOUR-ENVIRONMENT.lightkeeperhq.com"</span>)
+credential_manager.set_secret(<span class="st">'YOUR_CLIENT_ID'</span>, <span class="st">'YOUR_CLIENT_SECRET'</span>)</code></pre>
+      <p>Run this once. By default it remembers your credentials only for your current terminal session. To have it remember them permanently and securely (using your operating system's built-in credential store), also install one more package:</p>
+      <pre><code>pip install keyring</code></pre>
+      <p>With credentials stored, you can build requests from simple pieces instead of a full copied URL:</p>
+      <pre><code><span class="kw">import</span> lkapi
+
+frames = lkapi.get_grid_data(
+    grid=<span class="st">"YOUR_GRID"</span>,
+    environment=<span class="st">"YOUR-ENVIRONMENT"</span>,
+    portfolio=<span class="st">"PORT"</span>,
+    rollup=<span class="st">"ISSUER"</span>,
+    begin_date=<span class="st">"2025-01-01"</span>,
+    end_date=<span class="st">"2025-01-31"</span>,
+)</code></pre>
+    </div>
+  </section>
+
+  <section class="step" id="other-languages">
+    <span class="step-num">8</span>
+    <h2>Prefer a different language?<span class="optional-tag">Optional</span></h2>
+    <div class="step-body">
+      <p>Everything above is Python because <code>lkapi</code> is a Python package, but Lightkeeper's Web API itself works the same way regardless of what programming language you or your team use. Under the hood, <code>lkapi</code> is just doing two things that any language can do:</p>
+      <ol>
+        <li><strong>Exchange your <code>client_id</code>/<code>client_secret</code> for a temporary access token</strong>: a one-time login that's valid for one hour.</li>
+        <li><strong>Use that token to request your grid data</strong> from the same URL you copied in Step 4.</li>
+      </ol>
+      <p>This is what those two steps look like using <a href="https://curl.se/">curl</a> (a common command-line tool for making web requests), for illustration:</p>
+      <pre><code><span class="cm"># 1) Exchange client credentials for a bearer token (valid for one hour)</span>
+curl -s -X POST <span class="st">"https://api.auth.YOUR-ENVIRONMENT.lightkeeperhq.com/oauth2/token"</span> \
+  -d grant_type=client_credentials \
+  -d client_id=<span class="st">"YOUR_CLIENT_ID"</span> \
+  -d client_secret=<span class="st">"YOUR_CLIENT_SECRET"</span>
+<span class="cm"># -&gt; {"token_type": "Bearer", "access_token": "eyJ...", "expires_in": 3600}</span>
+
+<span class="cm"># 2) Request grid data (the same URL you copied in Step 4)</span>
+curl -s <span class="st">"https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131"</span> \
+  -H <span class="st">"Authorization: Bearer YOUR_ACCESS_TOKEN"</span></code></pre>
+      <p>The response is plain JSON, so any language that can make an HTTPS request and parse JSON can use it directly: no <code>lkapi</code> package required.</p>
+      <p>If your team wants a ready-made client in another language, an <a href="https://www.openapis.org/">OpenAPI</a> specification for this API is available in the <code>lkapi</code> repository (<code>openapi/lkapi.yaml</code>), which the <a href="https://openapi-generator.tech/">openapi-generator</a> tool can turn into a client for C#, JavaScript, Java, and many other languages. This is a developer-facing option, best handed to your engineering or IT team rather than done yourself.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>For anything related to getting API access, credentials, or general questions, reach out to <a href="https://lightkeeper.com/">Lightkeeper support</a>.</p>
+  </footer>
+
+</div>

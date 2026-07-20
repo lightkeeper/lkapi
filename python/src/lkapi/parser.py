@@ -92,7 +92,7 @@ def build_api_url(url:typing.Optional[str]=None,
                   begin_date:typing.Optional[typing.Any]=None, end_date:typing.Optional[typing.Any]=None,
                   portfolio:typing.Optional[str]=None, rollup:typing.Optional[str]=None,
                   credential_manager:typing.Optional[lkcred.CredentialManager]=None,
-                  api_version:typing.Optional[int]=None) -> str:
+                  api_version:typing.Optional[int]=None, **kwargs) -> str:
     """
     Builds the data grid API url to a server returning a string url.
     Args:
@@ -163,6 +163,16 @@ def build_api_url(url:typing.Optional[str]=None,
 
     if rollup is not None:
         api_url += f"&{ROLLUP_FIELD}={rollup}"
+    elif ROLLUP_FIELD in url_parts:
+        api_url += f"&{ROLLUP_FIELD}={url_parts[ROLLUP_FIELD]}"
+
+    # pass through any other query parameters from the original url (e.g. viewby, dateSnap) that
+    # aren't explicitly modeled as function arguments above, so a copied url's behavior is preserved
+    known_fields = {DOMAIN_FIELD, ENVIRONMENT_FIELD, MODE_FIELD, GRID_FIELD, API_VERSION_FIELD,
+                    'portfolio', BEGIN_DATE_FIELD, END_DATE_FIELD, ROLLUP_FIELD}
+    for key, value in url_parts.items():
+        if key not in known_fields:
+            api_url += f"&{key}={value}"
 
     return api_url
 
@@ -325,7 +335,10 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
                 data_headers = [base_data_type] + data_headers[1:]
                 data_frame = pd.DataFrame(data, columns=data_headers)
             else:
-                data_frame = pd.DataFrame([data], columns=data_headers[1:])
+                # a single flat row: some responses include a placeholder value for the label column
+                # (e.g. an empty string for a totals row), others omit it entirely
+                row_headers = data_headers if len(data) == len(data_headers) else data_headers[1:]
+                data_frame = pd.DataFrame([data], columns=row_headers)
         else:
             # blocks excluded by a viewby selection are metadata-only stubs without a data key
             data_frame = pd.DataFrame([r for r in data.get('data', [])], columns=data_headers)

@@ -1,0 +1,201 @@
+# Getting started with lkapi
+
+A step-by-step guide for pulling your Lightkeeper portfolio data using the LK API repository.
+
+## What this is
+
+`lkapi` is a small Python tool that lets you pull your firm's Lightkeeper portfolio data straight into a table you can filter, sort, chart, save as a CSV, etc.. The data is sourced from saved Grid views from the user interface. These saved views are referenced when making a request and return data as a "DataFrame" and allows you to inspect and manipulate with a Python librarby called Pandas. You don't need an extensive programming background; this guide will get you started with finding, installing, and running the LK API tool.
+
+This guide, and the `lkapi` package itself, are Python-specific, but the underlying Lightkeeper Web API isn't tied to any one programming language. It's a standard web API, so it works the same way from Python, R, C#, JavaScript, or anything else that can make an HTTPS request. If your team already works in a different language, see [Prefer a different language?](#prefer-a-different-language) near the end of this guide.
+
+## Before you start
+
+You need two things from Lightkeeper before any of this will work:
+
+1. **A `client_id` and `client_secret`.** These are like a username and password for the API. There's no self-service way to get these. Reach out to your Lightkeeper contact or [Lightkeeper support](https://lightkeeper.com/) and ask for API access.
+2. **The web address (URL) of the data grid you want.** You'll copy this from the Lightkeeper UI in Step 4 below. You don't need it yet.
+
+## Step 1: Install Python
+
+You need Python version 3.10 or newer.
+
+**Windows:**
+1. Go to [python.org/downloads](https://www.python.org/downloads/) and download the latest installer.
+2. Run it. On the very first screen, **check the box that says "Add python.exe to PATH"** before clicking Install. This step is easy to miss and causes problems later if skipped.
+3. Open the **Command Prompt** (search for it in the Start menu) and type:
+   ```
+   python --version
+   ```
+   You should see something like `Python 3.12.4`. If you see an error instead, close and reopen Command Prompt and try again.
+
+**Mac:**
+1. Go to [python.org/downloads](https://www.python.org/downloads/) and download the latest macOS installer.
+2. Run it and follow the prompts.
+3. Open the **Terminal** app (search for it with Spotlight, Cmd+Space) and type:
+   ```
+   python3 --version
+   ```
+   You should see something like `Python 3.12.4`.
+
+> On Mac, use `python3` and `pip3` everywhere this guide says `python`/`pip`.
+
+## Step 2: Install lkapi and Jupyter
+
+In the same Command Prompt / Terminal window, type:
+```bash
+pip install lkapi jupyter
+```
+
+This installs two things:
+- **lkapi**: the tool that talks to Lightkeeper.
+- **Jupyter Notebook**: a tool you can use to actually run your code (explained below).
+
+### What is Jupyter Notebook?
+
+Jupyter Notebook is a free, widely-used tool that opens as a page in your web browser. Instead of writing one big program, you write small pieces of Python code in boxes called **cells** and run them one at a time. Each cell's result (a number, a table, a chart) appears right underneath it. It's a bit like a spreadsheet where each formula shows its own answer immediately below, rather than in a separate cell. This makes it a popular way for people without a software engineering background to explore data with Python.
+
+**Jupyter is just one way to run this code, not the only one.** This guide uses it because it's the easiest starting point if you've never run Python before, but `lkapi` is a normal Python package, so anyone on your team who already codes can use whatever tool they're comfortable with instead:
+- **A terminal**: save the same code in a plain text file ending in `.py` (e.g. `my_query.py`) and run it with `python my_query.py`. You won't see each step's output automatically like in a notebook, so you'd add a `print(...)` line wherever you want to see a result.
+- **An IDE like [VS Code](https://code.visualstudio.com/)**: a full code editor with error-checking, autocomplete, and (via its Python/Jupyter extensions) the ability to run either plain scripts or notebook-style cells directly in the editor. Common among people who write Python regularly.
+
+Everything you need to know for this guide is: cells, running a cell with **Shift+Enter**, and saving your work, covered in Step 3 below. If you want to explore further on your own:
+- [Try Jupyter](https://jupyter.org/try): run a notebook in your browser with no installation, to get a feel for it.
+- [Jupyter Documentation](https://docs.jupyter.org/en/latest/): the official docs, including a beginner-friendly walkthrough of the interface.
+
+## Step 3: Launch Jupyter and open a new notebook
+
+1. In the same terminal window, type:
+   ```bash
+   jupyter notebook
+   ```
+2. A browser tab will open showing a file browser (the address bar will say something like `localhost:8888/tree`).
+3. Click the **New** dropdown near the top right. Under the **Notebook** section, choose **Python 3 (ipykernel)**.
+   > Make sure you pick **Notebook > Python 3 (ipykernel)**, not **Text File** or **Python File**. Those create a plain `.py` file that just displays your code; there's no way to run it and no output will appear. A notebook file ends in `.ipynb` and its address bar will say `localhost:8888/notebooks/...`, not `localhost:8888/edit/...`.
+4. This opens a new notebook with one empty, ready-to-use cell.
+
+## Step 4: Get your grid URL
+
+1. In the Lightkeeper UI, open the grid (data view) you want data from.
+2. Go to **Grid > Api Routes**.
+3. Copy the URL shown there. It will look something like this:
+   ```
+   https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&rollup=ISSUER&bd=20250101&ed=20250131
+   ```
+   If what you copied looks roughly like that (starts with `https://`, contains `lightkeeperhq.com`, and has a `focus=` and `bd=`/`ed=` in it), you copied the right thing.
+
+## Step 5: Your first request
+
+Click into the first empty cell of your notebook and paste this, replacing the three placeholder values with your real URL, client ID, and client secret:
+
+```python
+import lkapi
+
+frames = lkapi.get_grid_data(
+    url="PASTE_YOUR_GRID_URL_HERE",
+    username="YOUR_CLIENT_ID",
+    password="YOUR_CLIENT_SECRET",
+)
+
+frames['rollup']
+```
+
+Press **Shift+Enter** to run the cell. After a moment, you should see a table appear below the cell. That's your portfolio data.
+
+`frames` is a dictionary containing a few different tables, depending on what you need:
+- `frames['rollup']`: one row per rollup (e.g. per issuer, per sector), summarized for the whole date range you requested.
+- `frames['time']`: one row per time period (e.g. per day), summarized across the portfolio.
+- `frames['total']`: the overall totals.
+- `frames['portfolio']`: details about the portfolio itself (available dates, last update time).
+- `frames['request']`: details about the request you made (useful mainly for troubleshooting).
+
+### A speed tip: `viewby`
+
+Your grid URL can include an optional `viewby=rollup` or `viewby=time` parameter (if it's missing, `time` is used). This controls how much day-by-day detail the server computes, and for a wide date range it makes a real difference:
+
+- **`viewby=time`** (the default): computes the full day-by-day breakdown, so `frames['time']` has one row per period. For a short date range this is fine, but for a multi-year pull it can take a long time and return a very large amount of data.
+- **`viewby=rollup`**: skips the day-by-day breakdown. `frames['rollup']` is unaffected, but `frames['time']` will come back with just an overall total instead of one row per date. In exchange, the request can be dramatically faster: in internal testing, a multi-year pull dropped from around 28 seconds and 31 MB of data down to under a second and 50 KB by switching to `viewby=rollup`.
+
+If you only need rollup-level numbers (e.g. by issuer or sector) and not a day-by-day time series, add `&viewby=rollup` to your copied URL for a much faster response. This isn't a bug: an empty-looking `frames['time']` when you've set `viewby=rollup` is expected.
+
+### Date ranges and "date snap" views
+
+Some saved grid views have a **date snap**: a rule like "Year to Date" (YTD) or "Quarter to Date" (QTD) applied automatically, configured when the view was built in the Lightkeeper UI. Whether a view has a date snap changes how the `bd` (begin date) and `ed` (end date) parts of your URL behave:
+
+- **A view saved with a date snap (e.g. "YTD"):** the end date (`ed`, or `end_date` if building a request from components, see Step 7) is respected. Move it to see the same snap "as of" a different day. But the begin date (`bd` / `begin_date`) is *not* respected; it's always recalculated from the snap. For a "YTD" view, that means the begin date is always January 1st of whatever year your end date falls in, no matter what begin date you pass.
+- **A view saved with no date snap:** both the begin date and end date fully control the range, exactly as you'd expect. Change either one and the results shift accordingly.
+
+If you set a custom begin date and the results don't seem to reflect it, this is the most likely reason: check whether the grid was saved with a date snap.
+
+## Step 6: Common problems and what they mean
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `PermissionError: Invalid client credentials provided.` | Your client ID or client secret is wrong. | Double-check what Lightkeeper gave you; watch for extra spaces or a swapped ID/secret. |
+| `RuntimeError: ... forwarded to the signin screen` | The URL or credentials point at the wrong Lightkeeper environment. | Re-copy the URL from Step 4, making sure it's from the same environment your credentials belong to. |
+| `ModuleNotFoundError: No module named 'lkapi'` | lkapi isn't installed in the Python that Jupyter is actually using. | Close Jupyter, run `pip install lkapi` again from the same terminal window you'll use to launch `jupyter notebook`, then relaunch. |
+| `frames['time']` comes back almost empty | Your URL has `viewby=rollup`, which intentionally skips the day-by-day breakdown to make the request much faster (see the speed tip above). | If you need the daily breakdown, change (or add) `viewby=time` to your URL. Expect it to take longer for wide date ranges. |
+| Changing the begin date (`bd` / `begin_date`) has no effect | Your saved view has a date snap (like "YTD"), which always recalculates the begin date automatically (see "Date ranges and 'date snap' views" above). | This is expected for a snapped view; only the end date can move. Ask whoever built the grid whether a non-snapped version exists if you need full control over both dates. |
+
+If you hit something not listed here, reach out to [Lightkeeper support](https://lightkeeper.com/) with the full error message.
+
+## Step 7 (optional): Don't want to paste your secret every time?
+
+Once you're comfortable with the basics, you can store your credentials once instead of pasting them into every notebook:
+
+```python
+import lkapi
+
+# a long-lived credential manager which stores to the keyring if available or environment variables otherwise
+credential_manager = lkapi.get_credential_manager(url="https://YOUR-ENVIRONMENT.lightkeeperhq.com")
+credential_manager.set_secret('YOUR_CLIENT_ID', 'YOUR_CLIENT_SECRET')
+```
+
+Run this once. By default it remembers your credentials only for your current terminal session. To have it remember them permanently and securely (using your operating system's built-in credential store), also install one more package:
+```bash
+pip install keyring
+```
+
+With credentials stored, you can build requests from simple pieces instead of a full copied URL:
+
+```python
+import lkapi
+
+frames = lkapi.get_grid_data(
+    grid="YOUR_GRID",
+    environment="YOUR-ENVIRONMENT",
+    portfolio="PORT",
+    rollup="ISSUER",
+    begin_date="2025-01-01",
+    end_date="2025-01-31",
+)
+```
+
+## Prefer a different language?
+
+Everything above is Python because `lkapi` is a Python package, but Lightkeeper's Web API itself works the same way regardless of what programming language you or your team use. Under the hood, `lkapi` is just doing two things that any language can do:
+
+1. **Exchange your `client_id`/`client_secret` for a temporary access token**: a one-time login that's valid for one hour.
+2. **Use that token to request your grid data** from the same URL you copied in Step 4.
+
+This is what those two steps look like using [curl](https://curl.se/) (a common command-line tool for making web requests), for illustration:
+
+```bash
+# 1) Exchange client credentials for a bearer token (valid for one hour)
+curl -s -X POST "https://api.auth.YOUR-ENVIRONMENT.lightkeeperhq.com/oauth2/token" \
+  -d grant_type=client_credentials \
+  -d client_id="YOUR_CLIENT_ID" \
+  -d client_secret="YOUR_CLIENT_SECRET"
+# -> {"token_type": "Bearer", "access_token": "eyJ...", "expires_in": 3600}
+
+# 2) Request grid data (the same URL you copied in Step 4)
+curl -s "https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&rollup=ISSUER&bd=20250101&ed=20250131" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+The response is plain JSON, so any language that can make an HTTPS request and parse JSON can use it directly: no `lkapi` package required.
+
+If your team wants a ready-made client in another language, an [OpenAPI](https://www.openapis.org/) specification for this API is available in the `lkapi` repository (`openapi/lkapi.yaml`), which the [openapi-generator](https://openapi-generator.tech/) tool can turn into a client for C#, JavaScript, Java, and many other languages. This is a developer-facing option, best handed to your engineering or IT team rather than done yourself.
+
+## Where to get help
+
+For anything related to getting API access, credentials, or general questions, reach out to [Lightkeeper support](https://lightkeeper.com/).
