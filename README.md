@@ -14,6 +14,8 @@ The supported Python client is published to PyPI as [`lkapi`](https://pypi.org/p
 pip install lkapi
 ```
 
+See [python/README.md](python/README.md) for the full Python documentation, including secure credential storage and building requests from components instead of a copied url. The example below is a quick preview.
+
 ```python
 import lkapi
 
@@ -28,8 +30,6 @@ frames['rollup']  # summary per rollup for the full period, as a pandas DataFram
 frames['time']    # summary per time period
 frames['total']   # totals
 ```
-
-See [python/README.md](python/README.md) for the full Python documentation, including secure credential storage and building requests from components instead of a copied url.
 
 ## Using the API directly
 

@@ -167,6 +167,18 @@ def test_build_api_url_from_base_url(mock_credential_manager):
     assert "/mygrid/" in url  # from base
 
 
+def test_build_api_url_accepts_passthrough_kwargs(mock_credential_manager):
+    """Test build_api_url tolerates credential kwargs forwarded by get_grid_data.
+
+    get_grid_data forwards username/password and other credential kwargs to
+    build_api_url, so it must absorb them rather than raising a TypeError.
+    """
+    url = build_api_url(url=BASE_URL, portfolio="myportfolio",
+                        credential_manager=mock_credential_manager,
+                        username="CLIENT_ID_XXXXXX", password="CLIENT_SECRET_XXXXXXX")
+    assert "focus=myportfolio" in url
+
+
 def test_build_api_url_missing_required_args():
     """Test errors on missing required arguments for build_api_url."""
     with pytest.raises(ValueError, match="Either a url or grid name must be provided"):

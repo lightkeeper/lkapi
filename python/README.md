@@ -57,18 +57,18 @@ credential_manager.set_secret('YOUR_CLIENT_ID', 'YOUR_CLIENT_SECRET')
 
 The `CredentialManager` base class can be extended to provide custom credential storage mechanisms.
 
-With credentials stored, requests can be built from components instead of a copied url:
+With credentials stored, requests can be built from components instead of a copied url or sourced from the API source information found in the Grid:
 
 ```python
 import lkapi
 
 frames = lkapi.get_grid_data(
-    grid="YOUR_GRID",
+    grid="YOUR_LAYOUT_ID",
     environment="YOUR-ENVIRONMENT",
-    portfolio="PORT",
+    portfolio="LKP_YOUR_PORTFOLIO__PORT",
     rollup="ISSUER",
-    begin_date="2025-01-01",
-    end_date="2025-01-31",
+    begin_date="20250101",
+    end_date="20250131",
 )
 ```
 
