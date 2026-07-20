@@ -1,10 +1,16 @@
+<!--
+  MAINTAINER NOTE: This file is paired with docs/getting-started-artifact.html (the styled,
+  browser-facing version). The two are a pair — every content change (steps, examples, IDs,
+  troubleshooting rows) must be made in BOTH files so a reader gets the same information
+  whichever format they open.
+-->
 # Getting started with lkapi
 
 A step-by-step guide for pulling your Lightkeeper portfolio data using the LK API repository.
 
 ## What this is
 
-`lkapi` is a small Python tool that lets you pull your firm's Lightkeeper portfolio data straight into a table you can filter, sort, chart, save as a CSV, etc.. The data is sourced from saved Grid views from the user interface. These saved views are referenced when making a request and return data as a "DataFrame" and allows you to inspect and manipulate with a Python librarby called Pandas. You don't need an extensive programming background; this guide will get you started with finding, installing, and running the LK API tool.
+`lkapi` is a small Python tool that lets you pull your firm's Lightkeeper portfolio data straight into a table you can filter, sort, chart, save as a CSV, etc. The data is sourced from saved Grid views in the user interface. You reference one of these saved views when making a request, and the data comes back as a "DataFrame" — a table you can inspect and manipulate with a Python library called Pandas. You don't need an extensive programming background; this guide will get you started with finding, installing, and running the LK API tool.
 
 This guide, and the `lkapi` package itself, are Python-specific, but the underlying Lightkeeper Web API isn't tied to any one programming language. It's a standard web API, so it works the same way from Python, R, C#, JavaScript, or anything else that can make an HTTPS request. If your team already works in a different language, see [Prefer a different language?](#prefer-a-different-language) near the end of this guide.
 
@@ -15,9 +21,20 @@ You need two things from Lightkeeper before any of this will work:
 1. **A `client_id` and `client_secret`.** These are like a username and password for the API. There's no self-service way to get these. Reach out to your Lightkeeper contact or [Lightkeeper support](https://lightkeeper.com/) and ask for API access.
 2. **The web address (URL) of the data grid you want.** You'll copy this from the Lightkeeper UI in Step 4 below. You don't need it yet.
 
-## Step 1: Install Python
+## Step 1: Install Python (only if you don't already have it)
 
-You need Python version 3.10 or newer.
+This tool needs Python version 3.10 or newer. **Many computers already have Python, so check what you have before installing anything.**
+
+Open the **Command Prompt** (Windows: search for it in the Start menu) or the **Terminal** (Mac: press Cmd+Space, type "Terminal"), then run:
+```
+python --version
+```
+> On Mac, use `python3 --version` instead.
+
+- If it prints `3.10` or higher (for example `Python 3.12.4`), you already have what you need — **skip to Step 2.**
+- If it prints an older version, an error like `command not found`, or nothing at all, install Python using the steps below.
+
+### If you need to install it
 
 **Windows:**
 1. Go to [python.org/downloads](https://www.python.org/downloads/) and download the latest installer.
@@ -50,6 +67,30 @@ This installs two things:
 - **lkapi**: the tool that talks to Lightkeeper.
 - **Jupyter Notebook**: a tool you can use to actually run your code (explained below).
 
+### Already use `uv`, conda, or another environment manager?
+
+If you already manage isolated Python environments (with [uv](https://docs.astral.sh/uv/), conda, `venv`, etc.), you don't need the global `pip install` above, and you can even skip Step 1: `lkapi` is a normal package that installs into any environment. Two rules matter:
+
+1. Install **Jupyter into the same environment** as `lkapi`. If they land in different environments, the notebook won't find `lkapi` (the `ModuleNotFoundError` in Step 6).
+2. **Launch Jupyter from that same environment.**
+
+With `uv` you don't even have to install Python 3.10+ yourself — uv downloads a compatible version automatically:
+```bash
+uv init lk-data && cd lk-data
+uv add lkapi jupyter      # uv fetches a compatible Python if you don't have one
+uv run jupyter notebook   # then pick up at Step 3
+```
+
+With conda:
+```bash
+conda create -n lk python=3.12
+conda activate lk
+pip install lkapi jupyter
+jupyter notebook          # then pick up at Step 3
+```
+
+If none of this is familiar, ignore it and use the `pip install` command above — it's the simplest path.
+
 ### What is Jupyter Notebook?
 
 Jupyter Notebook is a free, widely-used tool that opens as a page in your web browser. Instead of writing one big program, you write small pieces of Python code in boxes called **cells** and run them one at a time. Each cell's result (a number, a table, a chart) appears right underneath it. It's a bit like a spreadsheet where each formula shows its own answer immediately below, rather than in a separate cell. This makes it a popular way for people without a software engineering background to explore data with Python.
@@ -79,7 +120,7 @@ Everything you need to know for this guide is: cells, running a cell with **Shif
 2. Go to **Grid > Api Routes**.
 3. Copy the URL shown there. It will look something like this:
    ```
-   https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&rollup=ISSUER&bd=20250101&ed=20250131
+   https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131
    ```
    If what you copied looks roughly like that (starts with `https://`, contains `lightkeeperhq.com`, and has a `focus=` and `bd=`/`ed=` in it), you copied the right thing.
 
@@ -130,6 +171,7 @@ If you set a custom begin date and the results don't seem to reflect it, this is
 
 | What you see | What it means | What to do |
 |---|---|---|
+| `ERROR: Could not find a version that satisfies the requirement lkapi` (often alongside `Requires-Python >=3.10`), when running `pip install` | Your Python is older than 3.10, so `pip` refuses to install `lkapi`. | Install Python 3.10 or newer (Step 1), or use an environment manager like `uv` that provides one (see the note in Step 2). Then run `pip install lkapi jupyter` again. |
 | `PermissionError: Invalid client credentials provided.` | Your client ID or client secret is wrong. | Double-check what Lightkeeper gave you; watch for extra spaces or a swapped ID/secret. |
 | `RuntimeError: ... forwarded to the signin screen` | The URL or credentials point at the wrong Lightkeeper environment. | Re-copy the URL from Step 4, making sure it's from the same environment your credentials belong to. |
 | `ModuleNotFoundError: No module named 'lkapi'` | lkapi isn't installed in the Python that Jupyter is actually using. | Close Jupyter, run `pip install lkapi` again from the same terminal window you'll use to launch `jupyter notebook`, then relaunch. |
@@ -138,7 +180,7 @@ If you set a custom begin date and the results don't seem to reflect it, this is
 
 If you hit something not listed here, reach out to [Lightkeeper support](https://lightkeeper.com/) with the full error message.
 
-## Step 7 (optional): Don't want to paste your secret every time?
+## Step 7 (optional): Stored credentials — don't want to paste your secret every time?
 
 Once you're comfortable with the basics, you can store your credentials once instead of pasting them into every notebook:
 
@@ -161,14 +203,32 @@ With credentials stored, you can build requests from simple pieces instead of a 
 import lkapi
 
 frames = lkapi.get_grid_data(
-    grid="YOUR_GRID",
+    grid="YOUR_LAYOUT_ID",
     environment="YOUR-ENVIRONMENT",
-    portfolio="PORT",
+    portfolio="LKP_YOUR_PORTFOLIO__PORT",
     rollup="ISSUER",
-    begin_date="2025-01-01",
-    end_date="2025-01-31",
+    begin_date="20250101",
+    end_date="20250131",
 )
 ```
+
+**Where do these values come from?** You don't have to invent them — every piece is already in the URL you copied in Step 4. Line it up against that URL:
+
+```
+https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131
+```
+
+| Argument | Where it is in the URL |
+|---|---|
+| `environment` | the part between `https://` and `.lightkeeperhq.com` |
+| `grid` | the segment right after `/layout/` |
+| `portfolio` | the `focus=` value |
+| `rollup` | the `rollup=` value |
+| `begin_date` / `end_date` | the `bd=` / `ed=` values |
+
+Your real portfolio and layout IDs are long, system-generated strings (like the `LKP_YOUR_PORTFOLIO__PORT` portfolio and layout ID shown here), not short friendly names — that's expected; just copy them exactly as they appear in the URL. (`rollup` is the exception: it's a grouping name like `ISSUER` or `SECTOR`.)
+
+> Use the **same** environment here that you stored your credentials under in the `set_secret` step above. If they don't match, `lkapi` won't find the credentials it just saved.
 
 ## Prefer a different language?
 
@@ -188,7 +248,7 @@ curl -s -X POST "https://api.auth.YOUR-ENVIRONMENT.lightkeeperhq.com/oauth2/toke
 # -> {"token_type": "Bearer", "access_token": "eyJ...", "expires_in": 3600}
 
 # 2) Request grid data (the same URL you copied in Step 4)
-curl -s "https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&rollup=ISSUER&bd=20250101&ed=20250131" \
+curl -s "https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 

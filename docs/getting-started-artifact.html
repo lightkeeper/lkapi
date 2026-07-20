@@ -1,3 +1,8 @@
+<!--
+  MAINTAINER NOTE: This file is the styled, browser-facing sibling of docs/getting-started.md.
+  The two are a pair — every content change (steps, examples, IDs, troubleshooting rows) must be
+  made in BOTH files so a reader gets the same information whichever format they open.
+-->
 <title>Getting started with lkapi</title>
 <style>
   :root {
@@ -357,10 +362,11 @@
     <p class="eyebrow">lkapi &middot; getting started</p>
     <h1>Getting started with lkapi</h1>
     <p class="dek">A step-by-step guide for pulling your Lightkeeper portfolio data using the LK API repository.</p>
+    <p class="dek-note">The data comes from saved Grid views in the Lightkeeper UI. You reference a saved view when making a request, and it comes back as a "DataFrame" — a table you can filter, sort, chart, or save as a CSV using the Python library Pandas. You don't need an extensive programming background; this guide covers finding, installing, and running the tool.</p>
     <p class="dek-note">This guide, and the <code>lkapi</code> package itself, are Python-specific, but the underlying Lightkeeper Web API isn't tied to any one language. It works the same way from Python, R, C#, JavaScript, or anything else that can make an HTTPS request. If your team works in a different language, see <a href="#other-languages">Prefer a different language?</a> near the end.</p>
     <ul class="toc">
       <li><a href="#before">Before you start</a></li>
-      <li><a href="#step-1">1. Install Python</a></li>
+      <li><a href="#step-1">1. Install Python (if needed)</a></li>
       <li><a href="#step-2">2. Install lkapi</a></li>
       <li><a href="#step-3">3. Launch Jupyter</a></li>
       <li><a href="#step-4">4. Get your grid URL</a></li>
@@ -381,9 +387,18 @@
 
   <section class="step" id="step-1">
     <span class="step-num">1</span>
-    <h2>Install Python</h2>
+    <h2>Install Python <span class="optional-tag">Only if you don't have it</span></h2>
     <div class="step-body">
-      <p>You need Python version 3.10 or newer.</p>
+      <p>This tool needs Python version 3.10 or newer. <strong>Many computers already have Python, so check what you have before installing anything.</strong></p>
+      <p>Open the <strong>Command Prompt</strong> (Windows: search for it in the Start menu) or the <strong>Terminal</strong> (Mac: press Cmd+Space, type &ldquo;Terminal&rdquo;), then run:</p>
+      <pre><code>python --version</code></pre>
+      <p><em>On Mac, use <code>python3 --version</code> instead.</em></p>
+      <ul>
+        <li>If it prints <code>3.10</code> or higher (for example <code>Python 3.12.4</code>), you already have what you need — <strong>skip to Step 2.</strong></li>
+        <li>If it prints an older version, an error like <code>command not found</code>, or nothing at all, install Python using the steps below.</li>
+      </ul>
+
+      <h3 class="platform-lead">If you need to install it</h3>
 
       <div class="platform">
         <h3>Windows</h3>
@@ -425,6 +440,25 @@ pip install lkapi jupyter</code></pre>
       </ul>
     </div>
   </section>
+
+  <div class="callout">
+    <p class="label">Already use uv, conda, or another environment manager?</p>
+    <p>If you already manage isolated Python environments (with <a href="https://docs.astral.sh/uv/">uv</a>, conda, <code>venv</code>, etc.), you don't need the global <code>pip install</code> above, and you can even skip Step 1: <code>lkapi</code> is a normal package that installs into any environment. Two rules matter:</p>
+    <ol>
+      <li>Install <strong>Jupyter into the same environment</strong> as <code>lkapi</code>. If they land in different environments, the notebook won't find <code>lkapi</code> (the <code>ModuleNotFoundError</code> in Step 6).</li>
+      <li><strong>Launch Jupyter from that same environment.</strong></li>
+    </ol>
+    <p>With <code>uv</code> you don't even have to install Python 3.10+ yourself — uv downloads a compatible version automatically:</p>
+    <pre><code>uv init lk-data &amp;&amp; cd lk-data
+uv add lkapi jupyter      <span class="cm"># uv fetches a compatible Python if you don't have one</span>
+uv run jupyter notebook   <span class="cm"># then pick up at Step 3</span></code></pre>
+    <p>With conda:</p>
+    <pre><code>conda create -n lk python=3.12
+conda activate lk
+pip install lkapi jupyter
+jupyter notebook          <span class="cm"># then pick up at Step 3</span></code></pre>
+    <p>If none of this is familiar, ignore it and use the <code>pip install</code> command above — it's the simplest path.</p>
+  </div>
 
   <div id="what-is-jupyter" class="callout">
     <p class="label">What is Jupyter Notebook?</p>
@@ -469,7 +503,7 @@ pip install lkapi jupyter</code></pre>
         <li>Go to <strong>Grid &gt; Api Routes</strong>.</li>
         <li>Copy the URL shown there. It will look something like this:</li>
       </ol>
-      <pre><code><span class="st">https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131</span></code></pre>
+      <pre><code><span class="st">https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131</span></code></pre>
       <p>If what you copied looks roughly like that (starts with <code>https://</code>, contains <code>lightkeeperhq.com</code>, and has a <code>focus=</code> and <code>bd=</code>/<code>ed=</code> in it), you copied the right thing.</p>
     </div>
   </section>
@@ -531,6 +565,11 @@ frames[<span class="st">'rollup'</span>]</code></pre>
           </thead>
           <tbody>
             <tr>
+              <td>ERROR: Could not find a version that satisfies the requirement lkapi (often alongside Requires-Python &gt;=3.10), when running <code>pip install</code></td>
+              <td>Your Python is older than 3.10, so <code>pip</code> refuses to install <code>lkapi</code>.</td>
+              <td>Install Python 3.10 or newer (Step 1), or use an environment manager like <code>uv</code> that provides one (see the note in Step 2). Then run <code>pip install lkapi jupyter</code> again.</td>
+            </tr>
+            <tr>
               <td>PermissionError: Invalid client credentials provided.</td>
               <td>Your client ID or client secret is wrong.</td>
               <td>Double-check what Lightkeeper gave you; watch for extra spaces or a swapped ID/secret.</td>
@@ -564,7 +603,7 @@ frames[<span class="st">'rollup'</span>]</code></pre>
 
   <section class="step" id="step-7">
     <span class="step-num">7</span>
-    <h2>Don't want to paste your secret every time?<span class="optional-tag">Optional</span></h2>
+    <h2>Stored credentials — don't want to paste your secret every time?<span class="optional-tag">Optional</span></h2>
     <div class="step-body">
       <p>Once you're comfortable with the basics, you can store your credentials once instead of pasting them into every notebook:</p>
       <pre><code><span class="kw">import</span> lkapi
@@ -578,13 +617,33 @@ credential_manager.set_secret(<span class="st">'YOUR_CLIENT_ID'</span>, <span cl
       <pre><code><span class="kw">import</span> lkapi
 
 frames = lkapi.get_grid_data(
-    grid=<span class="st">"YOUR_GRID"</span>,
+    grid=<span class="st">"YOUR_LAYOUT_ID"</span>,
     environment=<span class="st">"YOUR-ENVIRONMENT"</span>,
-    portfolio=<span class="st">"PORT"</span>,
+    portfolio=<span class="st">"LKP_YOUR_PORTFOLIO__PORT"</span>,
     rollup=<span class="st">"ISSUER"</span>,
-    begin_date=<span class="st">"2025-01-01"</span>,
-    end_date=<span class="st">"2025-01-31"</span>,
+    begin_date=<span class="st">"20250101"</span>,
+    end_date=<span class="st">"20250131"</span>,
 )</code></pre>
+      <p><strong>Where do these values come from?</strong> You don't have to invent them — every piece is already in the URL you copied in Step 4. Line it up against that URL:</p>
+      <pre><code><span class="st">https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131</span></code></pre>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Argument</th><th>Where it is in the URL</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>environment</code></td><td>the part between <code>https://</code> and <code>.lightkeeperhq.com</code></td></tr>
+            <tr><td><code>grid</code></td><td>the segment right after <code>/layout/</code></td></tr>
+            <tr><td><code>portfolio</code></td><td>the <code>focus=</code> value</td></tr>
+            <tr><td><code>rollup</code></td><td>the <code>rollup=</code> value</td></tr>
+            <tr><td><code>begin_date</code> / <code>end_date</code></td><td>the <code>bd=</code> / <code>ed=</code> values</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Your real portfolio and layout IDs are long, system-generated strings (like the <code>LKP_YOUR_PORTFOLIO__PORT</code> portfolio and layout ID shown here), not short friendly names — that's expected; just copy them exactly as they appear in the URL. (<code>rollup</code> is the exception: it's a grouping name like <code>ISSUER</code> or <code>SECTOR</code>.)</p>
+      <div class="callout">
+        <p>Use the <strong>same</strong> environment here that you stored your credentials under in the <code>set_secret</code> step above. If they don't match, <code>lkapi</code> won't find the credentials it just saved.</p>
+      </div>
     </div>
   </section>
 
@@ -606,7 +665,7 @@ curl -s -X POST <span class="st">"https://api.auth.YOUR-ENVIRONMENT.lightkeeperh
 <span class="cm"># -&gt; {"token_type": "Bearer", "access_token": "eyJ...", "expires_in": 3600}</span>
 
 <span class="cm"># 2) Request grid data (the same URL you copied in Step 4)</span>
-curl -s <span class="st">"https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131"</span> \
+curl -s <span class="st">"https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131"</span> \
   -H <span class="st">"Authorization: Bearer YOUR_ACCESS_TOKEN"</span></code></pre>
       <p>The response is plain JSON, so any language that can make an HTTPS request and parse JSON can use it directly: no <code>lkapi</code> package required.</p>
       <p>If your team wants a ready-made client in another language, an <a href="https://www.openapis.org/">OpenAPI</a> specification for this API is available in the <code>lkapi</code> repository (<code>openapi/lkapi.yaml</code>), which the <a href="https://openapi-generator.tech/">openapi-generator</a> tool can turn into a client for C#, JavaScript, Java, and many other languages. This is a developer-facing option, best handed to your engineering or IT team rather than done yourself.</p>
