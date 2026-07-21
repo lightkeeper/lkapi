@@ -29,7 +29,7 @@ try:
     __version__ = version("lkapi")
 except PackageNotFoundError:
     # running from a source tree without an installed distribution
-    __version__ = "0.0.0"
+    __version__ = "0.3.0"
 
 __all__ = [
     "get_grid_data",
