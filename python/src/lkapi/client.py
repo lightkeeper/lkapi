@@ -1,9 +1,7 @@
 
 #! /usr/bin/env python
 # Copyright (c) 2025 LightKeeper LLC
-# ANY REDISTRIBUTION OR COPYING OF THIS MATERIAL WITHOUT THE EXPRESS CONSENT
-# OF LIGHTKEEPER IS PROHIBITED.
-# All rights reserved.
+# Distributed under the MIT License (see LICENSE).
 #
 """
 Provides methods to retrieve data from a Lightkeeper environment as a data frame.  The core response from the

@@ -1,9 +1,7 @@
 
 #! /usr/bin/env python
 # Copyright (c) 2025 LightKeeper LLC
-# ANY REDISTRIBUTION OR COPYING OF THIS MATERIAL WITHOUT THE EXPRESS CONSENT
-# OF LIGHTKEEPER IS PROHIBITED.
-# All rights reserved.
+# Distributed under the MIT License (see LICENSE).
 #
 """
 Methods for processing Web API JSON data objects into pandas data frames.  The data returned from the
@@ -94,7 +92,7 @@ def build_api_url(url:typing.Optional[str]=None,
                   begin_date:typing.Optional[typing.Any]=None, end_date:typing.Optional[typing.Any]=None,
                   portfolio:typing.Optional[str]=None, rollup:typing.Optional[str]=None,
                   credential_manager:typing.Optional[lkcred.CredentialManager]=None,
-                  api_version:typing.Optional[int]=None) -> str:
+                  api_version:typing.Optional[int]=None, **kwargs) -> str:
     """
     Builds the data grid API url to a server returning a string url.
     Args:
