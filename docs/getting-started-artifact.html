@@ -411,6 +411,15 @@
         <p>You should see something like <code>Python 3.12.4</code>. If you see an error instead, close and reopen Command Prompt and try again.</p>
       </div>
 
+      <div class="callout-warn">
+        <p class="label">If <code>python</code> or <code>pip</code> says &ldquo;not recognized&rdquo; (Windows)</p>
+        <p>This almost always means the &ldquo;Add python.exe to PATH&rdquo; box in step 2 was missed. Two fixes:</p>
+        <ul>
+          <li><strong>Quick, no reinstall:</strong> use <code>py</code> instead of <code>python</code> — it works even without PATH. Try <code>py --version</code>, and use <code>py -m pip install ...</code> and <code>py -m jupyter notebook</code> wherever this guide says <code>pip</code> / <code>jupyter notebook</code>.</li>
+          <li><strong>Proper fix:</strong> re-run the installer and tick <strong>&ldquo;Add python.exe to PATH&rdquo;</strong> (or, if it opens to a &ldquo;Modify&rdquo; screen, choose Modify &rarr; Advanced Options &rarr; <strong>&ldquo;Add Python to environment variables&rdquo;</strong>). Then <strong>close every Command Prompt window and open a new one</strong> — PATH changes only apply to windows opened afterward.</li>
+        </ul>
+      </div>
+
       <div class="platform">
         <h3>Mac</h3>
         <ol>
@@ -564,6 +573,11 @@ frames[<span class="st">'rollup'</span>]</code></pre>
             <tr><th>What you see</th><th>What it means</th><th>What to do</th></tr>
           </thead>
           <tbody>
+            <tr>
+              <td>'python' is not recognized&hellip; or 'pip' is not recognized&hellip; (Windows), or command not found (Mac)</td>
+              <td>Python isn't on your PATH, so the terminal can't find it — usually the &ldquo;Add python.exe to PATH&rdquo; box was unchecked when Python was installed.</td>
+              <td><strong>Quick fix:</strong> use the <code>py</code> launcher, which works without PATH — <code>py -m pip install ...</code> and <code>py -m jupyter notebook</code>. <strong>Proper fix:</strong> re-run the Python installer with &ldquo;Add python.exe to PATH&rdquo; ticked (or Modify &rarr; Advanced Options &rarr; &ldquo;Add Python to environment variables&rdquo;), then <strong>close and reopen</strong> Command Prompt. On Mac, use <code>python3</code> / <code>pip3</code>.</td>
+            </tr>
             <tr>
               <td>ERROR: Could not find a version that satisfies the requirement lkapi (often alongside Requires-Python &gt;=3.10), when running <code>pip install</code></td>
               <td>Your Python is older than 3.10, so <code>pip</code> refuses to install <code>lkapi</code>.</td>

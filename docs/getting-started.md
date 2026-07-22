@@ -45,6 +45,10 @@ python --version
    ```
    You should see something like `Python 3.12.4`. If you see an error instead, close and reopen Command Prompt and try again.
 
+> **If `python` or `pip` says "not recognized" (Windows):** this almost always means the "Add python.exe to PATH" box in step 2 was missed. Two fixes:
+> - **Quick, no reinstall:** use `py` instead of `python` — it works even without PATH. Try `py --version`, and use `py -m pip install ...` and `py -m jupyter notebook` wherever this guide says `pip` / `jupyter notebook`.
+> - **Proper fix:** re-run the installer and tick **"Add python.exe to PATH"** (or, if it opens to a "Modify" screen, choose Modify → Advanced Options → **"Add Python to environment variables"**). Then **close every Command Prompt window and open a new one** — PATH changes only apply to windows opened afterward.
+
 **Mac:**
 1. Go to [python.org/downloads](https://www.python.org/downloads/) and download the latest macOS installer.
 2. Run it and follow the prompts.
@@ -171,6 +175,7 @@ If you set a custom begin date and the results don't seem to reflect it, this is
 
 | What you see | What it means | What to do |
 |---|---|---|
+| `'python' is not recognized...` or `'pip' is not recognized...` (Windows), or `command not found` (Mac) | Python isn't on your PATH, so the terminal can't find it — usually the "Add python.exe to PATH" box was unchecked when Python was installed. | **Quick fix:** use the `py` launcher, which works without PATH — `py -m pip install ...` and `py -m jupyter notebook`. **Proper fix:** re-run the Python installer with "Add python.exe to PATH" ticked (or Modify → Advanced Options → "Add Python to environment variables"), then **close and reopen** Command Prompt. On Mac, use `python3` / `pip3`. |
 | `ERROR: Could not find a version that satisfies the requirement lkapi` (often alongside `Requires-Python >=3.10`), when running `pip install` | Your Python is older than 3.10, so `pip` refuses to install `lkapi`. | Install Python 3.10 or newer (Step 1), or use an environment manager like `uv` that provides one (see the note in Step 2). Then run `pip install lkapi jupyter` again. |
 | `PermissionError: Invalid client credentials provided.` | Your client ID or client secret is wrong. | Double-check what Lightkeeper gave you; watch for extra spaces or a swapped ID/secret. |
 | `RuntimeError: ... forwarded to the signin screen` | The URL or credentials point at the wrong Lightkeeper environment. | Re-copy the URL from Step 4, making sure it's from the same environment your credentials belong to. |
