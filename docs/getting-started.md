@@ -114,14 +114,14 @@ Everything you need to know for this guide is: cells, running a cell with **Shif
    jupyter notebook
    ```
 2. A browser tab will open showing a file browser (the address bar will say something like `localhost:8888/tree`).
-3. Click the **New** dropdown near the top right. Under the **Notebook** section, choose **Python 3 (ipykernel)**.
-   > Make sure you pick **Notebook > Python 3 (ipykernel)**, not **Text File** or **Python File**. Those create a plain `.py` file that just displays your code; there's no way to run it and no output will appear. A notebook file ends in `.ipynb` and its address bar will say `localhost:8888/notebooks/...`, not `localhost:8888/edit/...`.
+3. Click the **New** dropdown near the top right, then choose **Python 3 (ipykernel)** from the list.
+   > Make sure you pick **Python 3 (ipykernel)**, not **Text File** or **Python File**. Those create a plain `.py` file that just displays your code; there's no way to run it and no output will appear. A notebook file ends in `.ipynb` and its address bar will say `localhost:8888/notebooks/...`, not `localhost:8888/edit/...`.
 4. This opens a new notebook with one empty, ready-to-use cell.
 
 ## Step 4: Get your grid URL
 
 1. In the Lightkeeper UI, open the grid (data view) you want data from.
-2. Go to **Grid > Api Routes**.
+2. Click the **API** button.
 3. Copy the URL shown there. It will look something like this:
    ```
    https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131
@@ -129,6 +129,9 @@ Everything you need to know for this guide is: cells, running a cell with **Shif
    If what you copied looks roughly like that (starts with `https://`, contains `lightkeeperhq.com`, and has a `focus=` and `bd=`/`ed=` in it), you copied the right thing.
 
 ## Step 5: Your first request
+
+> **Terminal commands vs. Python code:** commands like `pip install` and `jupyter notebook` are typed straight into your Command Prompt/Terminal window. The code below is different — it's Python, meant to go in a notebook cell as described here, not typed directly into the terminal. If you ever want to run Python code without Jupyter, first type `python` (or `ipython`, if installed) into your terminal to start an interactive session — the prompt changes to `>>>` (or `In [1]:` for ipython) — enter your Python code there, then type `exit()` when you're done.
+> **If you use `ipython`:** pasting multi-line code can break because of its auto-indent behavior. If that happens, run `%paste` first, then paste your code again.
 
 Click into the first empty cell of your notebook and paste this, replacing the three placeholder values with your real URL, client ID, and client secret:
 
@@ -146,7 +149,7 @@ frames['rollup']
 
 Press **Shift+Enter** to run the cell. After a moment, you should see a table appear below the cell. That's your portfolio data.
 
-`frames` is a dictionary containing a few different tables, depending on what you need:
+The `lkapi.get_grid_data` function returns a dictionary containing a few different tables, depending on what you need. In this example with the get_grid_data() function set to frames, you can access the following data:
 - `frames['rollup']`: one row per rollup (e.g. per issuer, per sector), summarized for the whole date range you requested.
 - `frames['time']`: one row per time period (e.g. per day), summarized across the portfolio.
 - `frames['total']`: the overall totals.
@@ -157,10 +160,10 @@ Press **Shift+Enter** to run the cell. After a moment, you should see a table ap
 
 Your grid URL can include an optional `viewby=rollup` or `viewby=time` parameter (if it's missing, `time` is used). This controls how much day-by-day detail the server computes, and for a wide date range it makes a real difference:
 
-- **`viewby=time`** (the default): computes the full day-by-day breakdown, so `frames['time']` has one row per period. For a short date range this is fine, but for a multi-year pull it can take a long time and return a very large amount of data.
-- **`viewby=rollup`**: skips the day-by-day breakdown. `frames['rollup']` is unaffected, but `frames['time']` will come back with just an overall total instead of one row per date. In exchange, the request can be dramatically faster: in internal testing, a multi-year pull dropped from around 28 seconds and 31 MB of data down to under a second and 50 KB by switching to `viewby=rollup`.
+- **`viewby=time`**: computes the full day-by-day breakdown, so `frames['time']` has one row per period. For a short date range this is fine, but for a multi-year pull it can take a long time and return a very large amount of data.
+- **`viewby=rollup`**: skips the day-by-day breakdown. `frames['rollup']` is unaffected, but `frames['time']` will come back with just an overall total instead of one row per date. In exchange, the request can be dramatically faster.
 
-If you only need rollup-level numbers (e.g. by issuer or sector) and not a day-by-day time series, add `&viewby=rollup` to your copied URL for a much faster response. This isn't a bug: an empty-looking `frames['time']` when you've set `viewby=rollup` is expected.
+If you only need rollup-level numbers (e.g. by issuer or sector) and not a day-by-day time series, make sure  `&viewby=rollup` is included in the URL you are using for a much faster response. This isn't a bug: an empty-looking `frames['time']` when you've set `viewby=rollup` is expected.
 
 ### Date ranges and "date snap" views
 
@@ -169,18 +172,19 @@ Some saved grid views have a **date snap**: a rule like "Year to Date" (YTD) or 
 - **A view saved with a date snap (e.g. "YTD"):** the end date (`ed`, or `end_date` if building a request from components, see Step 7) is respected. Move it to see the same snap "as of" a different day. But the begin date (`bd` / `begin_date`) is *not* respected; it's always recalculated from the snap. For a "YTD" view, that means the begin date is always January 1st of whatever year your end date falls in, no matter what begin date you pass.
 - **A view saved with no date snap:** both the begin date and end date fully control the range, exactly as you'd expect. Change either one and the results shift accordingly.
 
-If you set a custom begin date and the results don't seem to reflect it, this is the most likely reason: check whether the grid was saved with a date snap.
+If you set a custom begin date and the results don't seem to reflect it, this is the most likely reason: check whether the grid was saved with a date snap. If you want full control over dates via variables, save your grid views without date snaps. 
 
 ## Step 6: Common problems and what they mean
 
 | What you see | What it means | What to do |
 |---|---|---|
 | `'python' is not recognized...` or `'pip' is not recognized...` (Windows), or `command not found` (Mac) | Python isn't on your PATH, so the terminal can't find it — usually the "Add python.exe to PATH" box was unchecked when Python was installed. | **Quick fix:** use the `py` launcher, which works without PATH — `py -m pip install ...` and `py -m jupyter notebook`. **Proper fix:** re-run the Python installer with "Add python.exe to PATH" ticked (or Modify → Advanced Options → "Add Python to environment variables"), then **close and reopen** Command Prompt. On Mac, use `python3` / `pip3`. |
+| `pip : The term 'pip' is not recognized...` (Windows), but `python --version` works fine | Python itself is on PATH, but its `Scripts` folder (where `pip.exe` lives) isn't. | Check `python --version` first to confirm this is the case, then run `python -m pip install ...` instead of `pip install ...` — it uses Python's own module runner and doesn't need `Scripts` on PATH. |
 | `ERROR: Could not find a version that satisfies the requirement lkapi` (often alongside `Requires-Python >=3.10`), when running `pip install` | Your Python is older than 3.10, so `pip` refuses to install `lkapi`. | Install Python 3.10 or newer (Step 1), or use an environment manager like `uv` that provides one (see the note in Step 2). Then run `pip install lkapi jupyter` again. |
 | `PermissionError: Invalid client credentials provided.` | Your client ID or client secret is wrong. | Double-check what Lightkeeper gave you; watch for extra spaces or a swapped ID/secret. |
 | `RuntimeError: ... forwarded to the signin screen` | The URL or credentials point at the wrong Lightkeeper environment. | Re-copy the URL from Step 4, making sure it's from the same environment your credentials belong to. |
 | `ModuleNotFoundError: No module named 'lkapi'` | lkapi isn't installed in the Python that Jupyter is actually using. | Close Jupyter, run `pip install lkapi` again from the same terminal window you'll use to launch `jupyter notebook`, then relaunch. |
-| `frames['time']` comes back almost empty | Your URL has `viewby=rollup`, which intentionally skips the day-by-day breakdown to make the request much faster (see the speed tip above). | If you need the daily breakdown, change (or add) `viewby=time` to your URL. Expect it to take longer for wide date ranges. |
+| `frames['time']` comes back almost empty | Your URL has `viewby=rollup`, which intentionally skips the day-by-day breakdown to make the request much faster (see the speed tip above). | If you need the daily breakdown, change (or add) `viewby=time` to your URL or remove the viewby parameter from the url entirely. Expect it to take longer for wide date ranges. |
 | Changing the begin date (`bd` / `begin_date`) has no effect | Your saved view has a date snap (like "YTD"), which always recalculates the begin date automatically (see "Date ranges and 'date snap' views" above). | This is expected for a snapped view; only the end date can move. Ask whoever built the grid whether a non-snapped version exists if you need full control over both dates. |
 
 If you hit something not listed here, reach out to [Lightkeeper support](https://lightkeeper.com/) with the full error message.
@@ -196,8 +200,7 @@ import lkapi
 credential_manager = lkapi.get_credential_manager(url="https://YOUR-ENVIRONMENT.lightkeeperhq.com")
 credential_manager.set_secret('YOUR_CLIENT_ID', 'YOUR_CLIENT_SECRET')
 ```
-
-Run this once. By default it remembers your credentials only for your current terminal session. To have it remember them permanently and securely (using your operating system's built-in credential store), also install one more package:
+In a longer term development or production environment, store credentials once in secure credential storage via the [keyring](https://pypi.org/project/keyring/) python module if installed or environment variables, rather than passing them in code. By default, this only remembers your credentials for your current terminal session, so run it again each time you start a new session.
 ```bash
 pip install keyring
 ```
@@ -217,7 +220,7 @@ frames = lkapi.get_grid_data(
 )
 ```
 
-**Where do these values come from?** You don't have to invent them — every piece is already in the URL you copied in Step 4. Line it up against that URL:
+**Where do these values come from?** The properties for the get_grid_data function can be found in the API url or in each Grid view by clicking on the Lightkeeper API icon:
 
 ```
 https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131

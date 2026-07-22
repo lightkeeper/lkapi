@@ -493,11 +493,11 @@ jupyter notebook          <span class="cm"># then pick up at Step 3</span></code
           <pre><code>jupyter notebook</code></pre>
         </li>
         <li>A browser tab will open showing a file browser (the address bar will say something like <code>localhost:8888/tree</code>).</li>
-        <li>Click the <strong>New</strong> dropdown near the top right. Under the <strong>Notebook</strong> section, choose <strong>Python 3 (ipykernel)</strong>.</li>
+        <li>Click the <strong>New</strong> dropdown near the top right, then choose <strong>Python 3 (ipykernel)</strong> from the list.</li>
       </ol>
       <div class="callout-warn">
         <p class="label">Common mistake</p>
-        <p>Make sure you pick <strong>Notebook &gt; Python 3 (ipykernel)</strong>, not <strong>Text File</strong> or <strong>Python File</strong>. Those create a plain <code>.py</code> file that just displays your code; there's no way to run it and no output will appear. A notebook file ends in <code>.ipynb</code>, and its address bar will say <code>localhost:8888/notebooks/...</code>, not <code>localhost:8888/edit/...</code>.</p>
+        <p>Make sure you pick <strong>Python 3 (ipykernel)</strong>, not <strong>Text File</strong> or <strong>Python File</strong>. Those create a plain <code>.py</code> file that just displays your code; there's no way to run it and no output will appear. A notebook file ends in <code>.ipynb</code>, and its address bar will say <code>localhost:8888/notebooks/...</code>, not <code>localhost:8888/edit/...</code>.</p>
       </div>
       <p>This opens a new notebook with one empty, ready-to-use cell.</p>
     </div>
@@ -509,7 +509,7 @@ jupyter notebook          <span class="cm"># then pick up at Step 3</span></code
     <div class="step-body">
       <ol>
         <li>In the Lightkeeper UI, open the grid (data view) you want data from.</li>
-        <li>Go to <strong>Grid &gt; Api Routes</strong>.</li>
+        <li>Click the <strong>API</strong> button.</li>
         <li>Copy the URL shown there. It will look something like this:</li>
       </ol>
       <pre><code><span class="st">https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131</span></code></pre>
@@ -521,6 +521,11 @@ jupyter notebook          <span class="cm"># then pick up at Step 3</span></code
     <span class="step-num">5</span>
     <h2>Your first request</h2>
     <div class="step-body">
+      <div class="callout-warn">
+        <p class="label">Terminal commands vs. Python code</p>
+        <p>Commands like <code>pip install</code> and <code>jupyter notebook</code> are typed straight into your Command Prompt/Terminal window. The code below is different — it's Python, meant to go in a notebook cell as described here, not typed directly into the terminal. If you ever want to run Python code without Jupyter, first type <code>python</code> (or <code>ipython</code>, if installed) into your terminal to start an interactive session — the prompt changes to <code>&gt;&gt;&gt;</code> (or <code>In [1]:</code> for ipython) — enter your Python code there, then type <code>exit()</code> when you're done.</p>
+        <p><strong>If you use <code>ipython</code>:</strong> pasting multi-line code can break because of its auto-indent behavior. If that happens, run <code>%paste</code> first, then paste your code again.</p>
+      </div>
       <p>Click into the first empty cell of your notebook and paste this, replacing the three placeholder values with your real URL, client ID, and client secret:</p>
       <pre><code><span class="kw">import</span> lkapi
 
@@ -532,7 +537,7 @@ frames = lkapi.get_grid_data(
 
 frames[<span class="st">'rollup'</span>]</code></pre>
       <p>Press <strong>Shift+Enter</strong> to run the cell. After a moment, you should see a table appear below the cell. That's your portfolio data.</p>
-      <p><code>frames</code> is a dictionary containing a few different tables, depending on what you need:</p>
+      <p>The <code>lkapi.get_grid_data</code> function returns a dictionary containing a few different tables, depending on what you need. In this example with the get_grid_data() function set to frames, you can access the following data:</p>
       <ul class="frame-keys">
         <li><code>frames['rollup']</code><span class="fk-desc">One row per rollup (e.g. per issuer, per sector), summarized for the whole date range you requested.</span></li>
         <li><code>frames['time']</code><span class="fk-desc">One row per time period (e.g. per day), summarized across the portfolio.</span></li>
@@ -545,10 +550,10 @@ frames[<span class="st">'rollup'</span>]</code></pre>
         <p class="label">Speed tip: viewby</p>
         <p>Your grid URL can include an optional <code>viewby=rollup</code> or <code>viewby=time</code> parameter (if it's missing, <code>time</code> is used). This controls how much day-by-day detail the server computes, and for a wide date range it makes a real difference:</p>
         <ul>
-          <li><strong>viewby=time</strong> (the default): computes the full day-by-day breakdown, so <code>frames['time']</code> has one row per period. Fine for a short range, but for a multi-year pull it can take a long time and return a lot of data.</li>
-          <li><strong>viewby=rollup</strong>: skips the day-by-day breakdown. <code>frames['rollup']</code> is unaffected, but <code>frames['time']</code> comes back with just an overall total instead of one row per date. In exchange, the request can be dramatically faster: in internal testing, a multi-year pull dropped from around 28 seconds and 31&nbsp;MB down to under a second and 50&nbsp;KB by switching to <code>viewby=rollup</code>.</li>
+          <li><strong>viewby=time</strong>: computes the full day-by-day breakdown, so <code>frames['time']</code> has one row per period. Fine for a short range, but for a multi-year pull it can take a long time and return a lot of data.</li>
+          <li><strong>viewby=rollup</strong>: skips the day-by-day breakdown. <code>frames['rollup']</code> is unaffected, but <code>frames['time']</code> comes back with just an overall total instead of one row per date. In exchange, the request can be dramatically faster.</li>
         </ul>
-        <p>If you only need rollup-level numbers and not a day-by-day series, add <code>&amp;viewby=rollup</code> to your URL for a much faster response. An empty-looking <code>frames['time']</code> in that case is expected, not a bug.</p>
+        <p>If you only need rollup-level numbers and not a day-by-day series, make sure <code>&amp;viewby=rollup</code> is included in the URL you are using for a much faster response. An empty-looking <code>frames['time']</code> in that case is expected, not a bug.</p>
       </div>
 
       <div class="callout-warn">
@@ -558,7 +563,7 @@ frames[<span class="st">'rollup'</span>]</code></pre>
           <li><strong>A view saved with a date snap (e.g. "YTD")</strong>: the end date (<code>ed</code>, or <code>end_date</code> if building a request from components, see Step 7) is respected: move it to see the same snap "as of" a different day. But the begin date (<code>bd</code> / <code>begin_date</code>) is <em>not</em> respected; it's always recalculated from the snap. For a "YTD" view, the begin date is always January 1st of whatever year your end date falls in, no matter what begin date you pass.</li>
           <li><strong>A view saved with no date snap</strong>: both the begin date and end date fully control the range, exactly as you'd expect.</li>
         </ul>
-        <p>If you set a custom begin date and the results don't seem to reflect it, this is the most likely reason: check whether the grid was saved with a date snap.</p>
+        <p>If you set a custom begin date and the results don't seem to reflect it, this is the most likely reason: check whether the grid was saved with a date snap. If you want full control over dates via variables, save your grid views without date snaps.</p>
       </div>
     </div>
   </section>
@@ -577,6 +582,11 @@ frames[<span class="st">'rollup'</span>]</code></pre>
               <td>'python' is not recognized&hellip; or 'pip' is not recognized&hellip; (Windows), or command not found (Mac)</td>
               <td>Python isn't on your PATH, so the terminal can't find it — usually the &ldquo;Add python.exe to PATH&rdquo; box was unchecked when Python was installed.</td>
               <td><strong>Quick fix:</strong> use the <code>py</code> launcher, which works without PATH — <code>py -m pip install ...</code> and <code>py -m jupyter notebook</code>. <strong>Proper fix:</strong> re-run the Python installer with &ldquo;Add python.exe to PATH&rdquo; ticked (or Modify &rarr; Advanced Options &rarr; &ldquo;Add Python to environment variables&rdquo;), then <strong>close and reopen</strong> Command Prompt. On Mac, use <code>python3</code> / <code>pip3</code>.</td>
+            </tr>
+            <tr>
+              <td>pip : The term 'pip' is not recognized&hellip; (Windows), but <code>python --version</code> works fine</td>
+              <td>Python itself is on PATH, but its <code>Scripts</code> folder (where <code>pip.exe</code> lives) isn't.</td>
+              <td>Check <code>python --version</code> first to confirm this is the case, then run <code>python -m pip install ...</code> instead of <code>pip install ...</code> — it uses Python's own module runner and doesn't need <code>Scripts</code> on PATH.</td>
             </tr>
             <tr>
               <td>ERROR: Could not find a version that satisfies the requirement lkapi (often alongside Requires-Python &gt;=3.10), when running <code>pip install</code></td>
@@ -601,7 +611,7 @@ frames[<span class="st">'rollup'</span>]</code></pre>
             <tr>
               <td>frames['time'] comes back almost empty</td>
               <td>Your URL has viewby=rollup, which intentionally skips the day-by-day breakdown to make the request much faster.</td>
-              <td>If you need the daily breakdown, change (or add) <code>viewby=time</code> to your URL. Expect it to take longer for wide date ranges.</td>
+              <td>If you need the daily breakdown, change (or add) <code>viewby=time</code> to your URL or remove the viewby parameter from the url entirely. Expect it to take longer for wide date ranges.</td>
             </tr>
             <tr>
               <td>Changing bd / begin_date has no effect</td>
@@ -625,7 +635,7 @@ frames[<span class="st">'rollup'</span>]</code></pre>
 <span class="cm"># a long-lived credential manager which stores to the keyring if available or environment variables otherwise</span>
 credential_manager = lkapi.get_credential_manager(url=<span class="st">"https://YOUR-ENVIRONMENT.lightkeeperhq.com"</span>)
 credential_manager.set_secret(<span class="st">'YOUR_CLIENT_ID'</span>, <span class="st">'YOUR_CLIENT_SECRET'</span>)</code></pre>
-      <p>Run this once. By default it remembers your credentials only for your current terminal session. To have it remember them permanently and securely (using your operating system's built-in credential store), also install one more package:</p>
+      <p>In a longer term development or production environment, store credentials once in secure credential storage via the <a href="https://pypi.org/project/keyring/">keyring</a> python module if installed or environment variables, rather than passing them in code. By default, this only remembers your credentials for your current terminal session, so run it again each time you start a new session.</p>
       <pre><code>pip install keyring</code></pre>
       <p>With credentials stored, you can build requests from simple pieces instead of a full copied URL:</p>
       <pre><code><span class="kw">import</span> lkapi
@@ -638,7 +648,7 @@ frames = lkapi.get_grid_data(
     begin_date=<span class="st">"20250101"</span>,
     end_date=<span class="st">"20250131"</span>,
 )</code></pre>
-      <p><strong>Where do these values come from?</strong> You don't have to invent them — every piece is already in the URL you copied in Step 4. Line it up against that URL:</p>
+      <p><strong>Where do these values come from?</strong> The properties for the get_grid_data function can be found in the API url or in each Grid view by clicking on the Lightkeeper API icon:</p>
       <pre><code><span class="st">https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&amp;rollup=ISSUER&amp;bd=20250101&amp;ed=20250131</span></code></pre>
       <div class="table-wrap">
         <table>
