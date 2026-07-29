@@ -28,7 +28,7 @@ The quickest start is to copy a url from the Lightkeeper UI (Grid > Api Routes) 
 import lkapi
 
 frames = lkapi.get_grid_data(
-    url="https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&rollup=ISSUER&bd=20250101&ed=20250131",
+    url="https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131",
     username="YOUR_CLIENT_ID",
     password="YOUR_CLIENT_SECRET",
 )

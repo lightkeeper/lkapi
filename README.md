@@ -21,7 +21,7 @@ import lkapi
 
 # The url is available in the Lightkeeper UI under Grid > Api Routes
 frames = lkapi.get_grid_data(
-    url="https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&rollup=ISSUER&bd=20250101&ed=20250131",
+    url="https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131",
     username="YOUR_CLIENT_ID",
     password="YOUR_CLIENT_SECRET",
 )
@@ -44,7 +44,7 @@ curl -s -X POST "https://api.auth.YOUR-ENVIRONMENT.lightkeeperhq.com/oauth2/toke
 # -> {"token_type": "Bearer", "access_token": "eyJ...", "expires_in": 3600}
 
 # 2) Request grid data (copy the url from the Lightkeeper UI under Grid > Api Routes)
-curl -s "https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_GRID/v2?focus=PORT&rollup=ISSUER&bd=20250101&ed=20250131" \
+curl -s "https://YOUR-ENVIRONMENT.lightkeeperhq.com/lightstation/api/reports/query/layout/YOUR_LAYOUT_ID/v2?focus=LKP_YOUR_PORTFOLIO__PORT&rollup=ISSUER&bd=20250101&ed=20250131" \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
