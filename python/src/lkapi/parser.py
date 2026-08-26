@@ -254,12 +254,18 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
                 if 'totals' in used_total_data:
                     key_data = used_total_data['totals']
                 elif 'groups' in used_total_data:
-                    key_data = [v['totals'] for v in used_total_data['groups'].values()]
+                    # label each group's totals row with the group name so the frame keeps its identity
+                    key_data = [[name] + list(group['totals'])
+                                for name, group in used_total_data['groups'].items() if 'totals' in group]
+                    if not key_data:
+                        continue
                 else:
                     continue
             else:
+                if key not in data:
+                    continue
                 key_data = data[key]
-            keyFrame = lk_layout_data_to_frame_v2(key_data, key, headers)
+            keyFrame = lk_layout_data_to_frame_v2(key_data, key, list(headers))
             if keyFrame is not None:
                 frame_data[key] = keyFrame
         if not frame_data:
@@ -271,6 +277,28 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
     return frame_data
 
 # ---- Version 2.0
+def align_row_headers(data_headers: typing.List[str], row_width: int) -> typing.List[str]:
+    """
+    Matches a block header list to the actual width of its data rows.
+
+    The first v2 header names the label column (e.g. 'Ticker', or 'Sector / Ticker' when grouping is
+    enabled) and summary rows -- the totals -- may or may not carry a value for it, so the header list
+    has to be trimmed to the row width rather than assumed.
+
+    Args:
+        data_headers: The block header names, label column first.
+        row_width: The number of values in a data row.
+    Returns: A list of column names of length row_width.
+    """
+    data_headers = list(data_headers)
+    if row_width == len(data_headers):
+        return data_headers
+    if row_width < len(data_headers):
+        # summary rows drop leading label columns ... keep the statistic headers aligned to the right
+        return data_headers[len(data_headers) - row_width:]
+    # more values than headers ... name the unknown trailing columns positionally
+    return data_headers + [f'Column {i + 1}' for i in range(len(data_headers), row_width)]
+
 def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers) -> pd.DataFrame:
     """
 
@@ -311,24 +339,31 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
             data_frame = data_frame[new_order]
 
             # Set the final column names
-            data_frame.columns = [data_headers[0]] + group_columns + data_headers[1:num_data_cols]
+            data_col_headers = align_row_headers(data_headers, num_data_cols)
+            data_frame.columns = [data_col_headers[0]] + group_columns + data_col_headers[1:]
         else:
             # No group columns, just set data column names
-            data_frame.columns = data_headers[:num_data_cols]
+            data_frame.columns = align_row_headers(data_headers, num_data_cols)
 
     else:
         if data_type == 'time':
-            data_headers[0] = 'Date'
+            data_headers = ['Date'] + data_headers[1:]
         if isinstance(data, list):
+            if not data:
+                return pd.DataFrame()
+            # rows of values label themselves by the outermost tag of the label column
+            data_headers = [data_headers[0].split(' / ')[0]] + data_headers[1:]
             if isinstance(data[0], list):
-                base_data_type =data_headers[0].split(' / ')[0]
-                data_headers = [base_data_type] + data_headers[1:]
-                data_frame = pd.DataFrame(data, columns=data_headers)
+                rows = data
             else:
-                data_frame = pd.DataFrame([data], columns=data_headers[1:])
+                # a single summary row of values
+                rows = [data]
+            data_frame = pd.DataFrame(rows, columns=align_row_headers(data_headers, max(len(r) for r in rows)))
         else:
             # blocks excluded by a viewby selection are metadata-only stubs without a data key
-            data_frame = pd.DataFrame([r for r in data.get('data', [])], columns=data_headers)
+            rows = [r for r in data.get('data', [])]
+            row_width = max((len(r) for r in rows), default=len(data_headers))
+            data_frame = pd.DataFrame(rows, columns=align_row_headers(data_headers, row_width))
 
     return clean_frame(data_frame)
 

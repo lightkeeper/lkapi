@@ -15,6 +15,7 @@ from lkapi.parser import (
     lk_api_data_to_frames,
     lk_layout_element_to_frames,
     lk_layout_data_to_frame_v2,
+    align_row_headers,
     extract_group_data,
     clean_frame,
     extract_temporal_field,
@@ -304,6 +305,46 @@ def test_extract_group_data(mock_v2_layout_element):
     assert len(df) == 3
     assert 'Sector' in df.columns
     assert df['Sector'].tolist() == ['Tech', 'Tech', 'Finance']
+
+
+def test_align_row_headers():
+    """Test header alignment for rows narrower, equal to, and wider than the header list."""
+    headers = ['Sector / Ticker', 'Value', 'Return %']
+    assert align_row_headers(headers, 3) == headers
+    # a totals row without a value for the label column
+    assert align_row_headers(headers, 2) == ['Value', 'Return %']
+    assert align_row_headers(headers, 4) == headers + ['Column 4']
+
+
+def test_lk_layout_element_to_frames_grouped_labeled_totals(mock_v2_layout_element):
+    """Test a grouped block whose totals row carries a value for the label column."""
+    mock_v2_layout_element['rollup']['totals'] = ['Total', 370, 3.5]
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    assert list(result['total'].columns) == ['Sector', 'Value', 'Return %']
+    assert result['total'].to_dict('records') == [{'Sector': 'Total', 'Value': 370, 'Return %': 0.035}]
+
+
+def test_lk_layout_element_to_frames_grouped_group_totals(mock_v2_layout_element):
+    """Test a grouped block with no overall totals ... group totals are labeled by group name."""
+    del mock_v2_layout_element['rollup']['totals']
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    assert list(result['total'].columns) == ['Sector', 'Value', 'Return %']
+    assert result['total']['Sector'].tolist() == ['Tech', 'Finance']
+    assert result['total']['Value'].tolist() == [270, 100]
+
+
+def test_lk_layout_element_to_frames_rollup_only(mock_v2_layout_element):
+    """Test a block that omits the time key entirely."""
+    del mock_v2_layout_element['time']
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    assert set(result) == {'rollup', 'total'}
+
+
+def test_lk_layout_data_to_frame_v2_wide_rows():
+    """Test data rows carrying more values than the block headers describe."""
+    data = {'data': [['T1', 100, 5], ['T2', 200, 6]]}
+    df = lk_layout_data_to_frame_v2(data, 'rollup', ['Ticker', 'Value'])
+    assert list(df.columns) == ['Ticker', 'Value', 'Column 3']
 
 
 # --- Test Frame Tools ---
