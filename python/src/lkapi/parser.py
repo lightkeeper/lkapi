@@ -277,27 +277,30 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
     return frame_data
 
 # ---- Version 2.0
-def align_row_headers(data_headers: typing.List[str], row_width: int) -> typing.List[str]:
+def align_row_headers(data_headers: typing.List[str], row_width: int,
+                      allow_missing_label: bool = False) -> typing.List[str]:
     """
     Matches a block header list to the actual width of its data rows.
 
     The first v2 header names the label column (e.g. 'Ticker', or 'Sector / Ticker' when grouping is
-    enabled) and summary rows -- the totals -- may or may not carry a value for it, so the header list
-    has to be trimmed to the row width rather than assumed.
+    enabled).  Data rows always carry that label, so a row narrower than the headers is missing
+    trailing statistics and keeps the leftmost headers.  Summary rows -- the totals -- may omit the
+    label instead, so those drop it before aligning.
 
     Args:
         data_headers: The block header names, label column first.
         row_width: The number of values in a data row.
+        allow_missing_label: True when the rows may omit a value for the label column.
     Returns: A list of column names of length row_width.
     """
     data_headers = list(data_headers)
-    if row_width == len(data_headers):
-        return data_headers
-    if row_width < len(data_headers):
-        # summary rows drop leading label columns ... keep the statistic headers aligned to the right
-        return data_headers[len(data_headers) - row_width:]
-    # more values than headers ... name the unknown trailing columns positionally
-    return data_headers + [f'Column {i + 1}' for i in range(len(data_headers), row_width)]
+    if row_width > len(data_headers):
+        # more values than headers ... name the unknown trailing columns positionally
+        return data_headers + [f'Column {i + 1}' for i in range(len(data_headers), row_width)]
+    if allow_missing_label and row_width < len(data_headers):
+        # a totals row without its label column
+        return data_headers[1:row_width + 1]
+    return data_headers[:row_width]
 
 def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers) -> pd.DataFrame:
     """
@@ -307,6 +310,8 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
     Returns: A data frame of the provided data.
     """
     is_grouped = "groups" in data.keys() if isinstance(data, dict) else False
+    # only the totals rows may arrive without a value for the label column
+    allow_missing_label = data_type == 'total'
 
     if is_grouped:
         group_headers = data_headers[0].split(' / ')
@@ -339,11 +344,11 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
             data_frame = data_frame[new_order]
 
             # Set the final column names
-            data_col_headers = align_row_headers(data_headers, num_data_cols)
+            data_col_headers = align_row_headers(data_headers, num_data_cols, allow_missing_label)
             data_frame.columns = [data_col_headers[0]] + group_columns + data_col_headers[1:]
         else:
             # No group columns, just set data column names
-            data_frame.columns = align_row_headers(data_headers, num_data_cols)
+            data_frame.columns = align_row_headers(data_headers, num_data_cols, allow_missing_label)
 
     else:
         if data_type == 'time':
@@ -358,12 +363,14 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
             else:
                 # a single summary row of values
                 rows = [data]
-            data_frame = pd.DataFrame(rows, columns=align_row_headers(data_headers, max(len(r) for r in rows)))
+            data_frame = pd.DataFrame(rows, columns=align_row_headers(data_headers, max(len(r) for r in rows),
+                                                                       allow_missing_label))
         else:
             # blocks excluded by a viewby selection are metadata-only stubs without a data key
             rows = [r for r in data.get('data', [])]
             row_width = max((len(r) for r in rows), default=len(data_headers))
-            data_frame = pd.DataFrame(rows, columns=align_row_headers(data_headers, row_width))
+            data_frame = pd.DataFrame(rows, columns=align_row_headers(data_headers, row_width,
+                                                                      allow_missing_label))
 
     return clean_frame(data_frame)
 

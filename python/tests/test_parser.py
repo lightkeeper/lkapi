@@ -311,9 +311,27 @@ def test_align_row_headers():
     """Test header alignment for rows narrower, equal to, and wider than the header list."""
     headers = ['Sector / Ticker', 'Value', 'Return %']
     assert align_row_headers(headers, 3) == headers
-    # a totals row without a value for the label column
-    assert align_row_headers(headers, 2) == ['Value', 'Return %']
+    # a data row carries its label ... a short row is missing trailing statistics
+    assert align_row_headers(headers, 2) == ['Sector / Ticker', 'Value']
+    # a totals row may omit the label column instead
+    assert align_row_headers(headers, 2, allow_missing_label=True) == ['Value', 'Return %']
+    assert align_row_headers(headers, 3, allow_missing_label=True) == headers
     assert align_row_headers(headers, 4) == headers + ['Column 4']
+
+
+def test_lk_layout_data_to_frame_v2_grouped_narrow_rows(mock_v2_layout_element):
+    """Test a grouped block whose rows are narrower than the block headers keeps its label column."""
+    df = lk_layout_data_to_frame_v2(mock_v2_layout_element['time'], 'time', mock_v2_layout_element['headers'])
+    assert list(df.columns) == ['Date', 'Sector', 'Value']
+    # the label column must not shift onto a ' %' header ... clean_frame would rescale the values
+    assert df['Value'].tolist() == [150, 155]
+
+
+def test_lk_layout_data_to_frame_v2_non_grouped_narrow_rows():
+    """Test a flat block whose rows are narrower than the block headers keeps its label column."""
+    df = lk_layout_data_to_frame_v2({'data': [['2023-01-01', 150]]}, 'time', ['Ticker', 'Value', 'Return %'])
+    assert list(df.columns) == ['Date', 'Value']
+    assert df['Value'].tolist() == [150]
 
 
 def test_lk_layout_element_to_frames_grouped_labeled_totals(mock_v2_layout_element):
