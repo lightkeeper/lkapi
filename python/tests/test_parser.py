@@ -15,6 +15,7 @@ from lkapi.parser import (
     lk_api_data_to_frames,
     lk_layout_element_to_frames,
     lk_layout_data_to_frame_v2,
+    align_row_headers,
     extract_group_data,
     clean_frame,
     extract_temporal_field,
@@ -304,6 +305,76 @@ def test_extract_group_data(mock_v2_layout_element):
     assert len(df) == 3
     assert 'Sector' in df.columns
     assert df['Sector'].tolist() == ['Tech', 'Tech', 'Finance']
+
+
+def test_align_row_headers():
+    """Test header alignment for rows narrower, equal to, and wider than the header list."""
+    headers = ['Sector / Ticker', 'Value', 'Return %']
+    assert align_row_headers(headers, 3) == headers
+    # a data row carries its label ... a short row is missing trailing statistics
+    assert align_row_headers(headers, 2) == ['Sector / Ticker', 'Value']
+    # a totals row may omit the label column instead
+    assert align_row_headers(headers, 2, allow_missing_label=True) == ['Value', 'Return %']
+    assert align_row_headers(headers, 3, allow_missing_label=True) == headers
+    assert align_row_headers(headers, 4) == headers + ['Column 4']
+
+
+def test_lk_layout_data_to_frame_v2_grouped_narrow_rows(mock_v2_layout_element):
+    """Test a grouped block whose rows are narrower than the block headers keeps its label column."""
+    df = lk_layout_data_to_frame_v2(mock_v2_layout_element['time'], 'time', mock_v2_layout_element['headers'])
+    assert list(df.columns) == ['Date', 'Sector', 'Value']
+    # the label column must not shift onto a ' %' header ... clean_frame would rescale the values
+    assert df['Value'].tolist() == [150, 155]
+
+
+def test_lk_layout_data_to_frame_v2_non_grouped_narrow_rows():
+    """Test a flat block whose rows are narrower than the block headers keeps its label column."""
+    df = lk_layout_data_to_frame_v2({'data': [['2023-01-01', 150]]}, 'time', ['Ticker', 'Value', 'Return %'])
+    assert list(df.columns) == ['Date', 'Value']
+    assert df['Value'].tolist() == [150]
+
+
+def test_lk_layout_element_to_frames_grouped_labeled_totals(mock_v2_layout_element):
+    """Test a grouped block whose totals row carries a value for the label column."""
+    mock_v2_layout_element['rollup']['totals'] = ['Total', 370, 3.5]
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    assert list(result['total'].columns) == ['Sector', 'Value', 'Return %']
+    assert result['total'].to_dict('records') == [{'Sector': 'Total', 'Value': 370, 'Return %': 0.035}]
+
+
+def test_lk_layout_element_to_frames_grouped_group_totals(mock_v2_layout_element):
+    """Test a grouped block with no overall totals ... group totals are labeled by group name."""
+    del mock_v2_layout_element['rollup']['totals']
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    assert list(result['total'].columns) == ['Sector', 'Value', 'Return %']
+    assert result['total']['Sector'].tolist() == ['Tech', 'Finance']
+    assert result['total']['Value'].tolist() == [270, 100]
+
+
+def test_lk_layout_element_to_frames_grouped_narrow_group_totals(mock_v2_layout_element):
+    """Test group totals rows short of trailing statistics keep the group name label."""
+    del mock_v2_layout_element['rollup']['totals']
+    for group in mock_v2_layout_element['rollup']['groups'].values():
+        group['totals'] = group['totals'][:1]
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    # the group name must not shift onto the ' %' header ... clean_frame would rescale the values
+    assert list(result['total'].columns) == ['Sector', 'Value']
+    assert result['total']['Sector'].tolist() == ['Tech', 'Finance']
+    assert result['total']['Value'].tolist() == [270, 100]
+
+
+def test_lk_layout_element_to_frames_rollup_only(mock_v2_layout_element):
+    """Test a block that omits the time key entirely."""
+    del mock_v2_layout_element['time']
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    assert set(result) == {'rollup', 'total'}
+
+
+def test_lk_layout_data_to_frame_v2_wide_rows():
+    """Test data rows carrying more values than the block headers describe."""
+    data = {'data': [['T1', 100, 5], ['T2', 200, 6]]}
+    df = lk_layout_data_to_frame_v2(data, 'rollup', ['Ticker', 'Value'])
+    assert list(df.columns) == ['Ticker', 'Value', 'Column 3']
 
 
 # --- Test Frame Tools ---
