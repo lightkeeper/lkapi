@@ -245,6 +245,8 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
     if data_version == 2:
         for key in ['rollup', 'time', 'total']:
             headers = data['headers']
+            # only a totals row may arrive without a value for the label column
+            allow_missing_label = key == 'total'
             if key == 'total':
                 # totals are either in rollup or time
                 used_total_cols = [col for col in ['rollup', 'time'] if col in data]
@@ -259,13 +261,15 @@ def lk_layout_element_to_frames(data: typing.Dict[str, typing.Any]) -> typing.Op
                                 for name, group in used_total_data['groups'].items() if 'totals' in group]
                     if not key_data:
                         continue
+                    # we supplied the label ourselves ... these rows are never missing it
+                    allow_missing_label = False
                 else:
                     continue
             else:
                 if key not in data:
                     continue
                 key_data = data[key]
-            keyFrame = lk_layout_data_to_frame_v2(key_data, key, list(headers))
+            keyFrame = lk_layout_data_to_frame_v2(key_data, key, list(headers), allow_missing_label)
             if keyFrame is not None:
                 frame_data[key] = keyFrame
         if not frame_data:
@@ -302,16 +306,23 @@ def align_row_headers(data_headers: typing.List[str], row_width: int,
         return data_headers[1:row_width + 1]
     return data_headers[:row_width]
 
-def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers) -> pd.DataFrame:
+def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, data_headers,
+                               allow_missing_label: typing.Optional[bool] = None) -> pd.DataFrame:
     """
 
     Args:
         data: A inner data dictionary such as rollup from V1 of the layout API.
+        data_type: The block key the data came from ('rollup', 'time' or 'total').
+        data_headers: The block header names, label column first.
+        allow_missing_label: True when the rows may omit a value for the label column.  Defaults to
+            the totals rows, the only ones the API sends unlabeled -- pass it explicitly when the
+            caller has already labeled them.
     Returns: A data frame of the provided data.
     """
     is_grouped = "groups" in data.keys() if isinstance(data, dict) else False
-    # only the totals rows may arrive without a value for the label column
-    allow_missing_label = data_type == 'total'
+    if allow_missing_label is None:
+        # only the totals rows may arrive without a value for the label column
+        allow_missing_label = data_type == 'total'
 
     if is_grouped:
         group_headers = data_headers[0].split(' / ')

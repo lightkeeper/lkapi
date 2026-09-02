@@ -351,6 +351,18 @@ def test_lk_layout_element_to_frames_grouped_group_totals(mock_v2_layout_element
     assert result['total']['Value'].tolist() == [270, 100]
 
 
+def test_lk_layout_element_to_frames_grouped_narrow_group_totals(mock_v2_layout_element):
+    """Test group totals rows short of trailing statistics keep the group name label."""
+    del mock_v2_layout_element['rollup']['totals']
+    for group in mock_v2_layout_element['rollup']['groups'].values():
+        group['totals'] = group['totals'][:1]
+    result = lk_layout_element_to_frames(mock_v2_layout_element)
+    # the group name must not shift onto the ' %' header ... clean_frame would rescale the values
+    assert list(result['total'].columns) == ['Sector', 'Value']
+    assert result['total']['Sector'].tolist() == ['Tech', 'Finance']
+    assert result['total']['Value'].tolist() == [270, 100]
+
+
 def test_lk_layout_element_to_frames_rollup_only(mock_v2_layout_element):
     """Test a block that omits the time key entirely."""
     del mock_v2_layout_element['time']
