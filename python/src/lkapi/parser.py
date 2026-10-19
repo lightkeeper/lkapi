@@ -325,7 +325,9 @@ def lk_layout_data_to_frame_v2(data: typing.Dict[str, typing.Any], data_type, da
                 data_headers = [base_data_type] + data_headers[1:]
                 data_frame = pd.DataFrame(data, columns=data_headers)
             else:
-                data_frame = pd.DataFrame([data], columns=data_headers[1:])
+                # a single totals row; grouped grids lead it with a label ('' for the grand total)
+                totals = data[1:] if len(data) == len(data_headers) else data
+                data_frame = pd.DataFrame([totals], columns=data_headers[1:])
         else:
             # blocks excluded by a viewby selection are metadata-only stubs without a data key
             data_frame = pd.DataFrame([r for r in data.get('data', [])], columns=data_headers)

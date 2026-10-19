@@ -358,3 +358,28 @@ def test_correlate_temporal_field_half(sample_dataframe):
     corr_df = correlate_temporal_field(sample_dataframe, 'Value', 'Ticker', half='lower')
     assert pd.isna(corr_df.loc['AAPL', 'MSFT'])
     assert np.isclose(corr_df.loc['MSFT', 'AAPL'], 1.0)
+
+
+def test_lk_layout_element_to_frames_grouped_totals_with_label():
+    """Grouped grids send their grand total led by an empty label, one value per header."""
+    element = {
+        'version': 2,
+        'headers': ['IssuerName / Issuer', 'IRR (End) %', 'XIRR inputs $'],
+        'groupHeaders': ['IssuerName', 'Issuer'],
+        'rollup': {
+            'groups': {
+                'Acme Inc': {'name': 'Acme Inc', 'data': [['Acme Inc', 12.5, 100.0]], 'totals': ['Acme Inc', 12.5, 100.0]},
+            },
+            'totals': ['', 17.25, 26155975231.5],
+        },
+        'time': {
+            'groups': {
+                'Acme Inc': {'name': 'Acme Inc', 'data': [['2026-01-02T00:00:00', 12.5, 0.0]], 'totals': ['Acme Inc', 12.5, 100.0]},
+            },
+            'totals': ['', 17.25, 26155975231.5],
+        },
+    }
+    frames = lk_layout_element_to_frames(element)
+    total = frames['total']
+    assert list(total.columns) == ['IRR (End) %', 'XIRR inputs $']
+    assert total.iloc[0]['XIRR inputs $'] == 26155975231.5
