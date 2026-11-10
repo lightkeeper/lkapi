@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/lightkeeper/lkapi/compare/0.3.0...0.3.1) (2026-11-10)
+
+
+### Bug Fixes
+
+* **deps:** bump certifi to 2026.10.19 for security fix ([c1114bf](https://github.com/lightkeeper/lkapi/commit/c1114bfa93fbbdd84ed3e3b582935845ddfa66e7))
+* **deps:** bump certifi to 2026.10.19 for security fix ([9f86cc3](https://github.com/lightkeeper/lkapi/commit/9f86cc30c30d0a75a9e07b3d451293ca13339b22))
+
 ## [0.3.0](https://github.com/lightkeeper/lkapi/compare/0.2.0...0.3.0) (2026-07-21)
 
 
